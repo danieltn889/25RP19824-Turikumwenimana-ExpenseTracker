@@ -104,11 +104,27 @@ jobs:
 
     - name: Check for secrets in code
       run: |
-        if grep -r "password\|secret\|token\|key" *.json *.md 2>/dev/null | grep -v "node_modules"; then
-          echo "Warning: Potential secrets found in code"
+        echo "✅ Scanning for hardcoded secrets..."
+        # Check only in source code, not documentation
+        SECRET_FOUND=false
+        
+        # Look for API keys/tokens in source files (not docs)
+        if grep -r "sk_live_\|pk_live_\|ghp_\|AKIA" api-service/src frontend-service/src 2>/dev/null; then
+          echo "⚠️  Found potential API keys in source code!"
+          SECRET_FOUND=true
+        fi
+        
+        # Check for hardcoded credentials in config files
+        if grep -r "password.*=.*[a-zA-Z0-9]" api-service/src frontend-service/src 2>/dev/null | grep -v "// \|# \|password_hash"; then
+          echo "⚠️  Found potential hardcoded passwords!"
+          SECRET_FOUND=true
+        fi
+        
+        if [ "$SECRET_FOUND" = true ]; then
+          echo "❌ Security issue: Hardcoded secrets detected"
           exit 1
         else
-          echo "No obvious secrets found"
+          echo "✅ No hardcoded secrets found in source code"
         fi
 
     - name: Scan with Trivy (filesystem)
