@@ -1,5 +1,8 @@
 FROM node:18-alpine
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001

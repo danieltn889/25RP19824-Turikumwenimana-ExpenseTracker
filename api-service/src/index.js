@@ -79,6 +79,7 @@ const port = process.env.API_PORT || 3000;
 // Middleware
 app.use(helmet());
 app.use(cors());
+app.options('*', cors()); // Handle preflight requests
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
