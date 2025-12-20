@@ -595,11 +595,11 @@ jobs:
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*API Health:*\n${{ steps.deployment-status.outputs.api_health == 'healthy' && '🟢 Healthy' || '🔴 Unhealthy' }}"
+                    "text": "*API Health:*\n${{ steps.deployment-status.outputs.api_health }}"
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Frontend Health:*\n${{ steps.deployment-status.outputs.frontend_health == 'healthy' && '🟢 Healthy' || '🔴 Unhealthy' }}"
+                    "text": "*Frontend Health:*\n${{ steps.deployment-status.outputs.frontend_health }}"
                   }
                 ]
               },
@@ -764,9 +764,10 @@ jobs:
                       "text": "View Workflow"
                     },
                     "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  },
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View
+                  }
+                ]
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
