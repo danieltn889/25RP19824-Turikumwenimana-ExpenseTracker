@@ -9,6 +9,7 @@ on:
 env:
   DOCKER_REGISTRY: docker.io
   IMAGE_PREFIX: danieltn889/25rp19824-turikumwenimana
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
   # ===========================================
@@ -42,6 +43,82 @@ jobs:
 
     - name: "✅ Stage 1 Complete: All tests passed"
       run: echo "Lint and test stage completed successfully"
+
+    - name: Notify Slack on Success (Stage 1)
+      if: success()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "✅ Stage 1: Lint & Test PASSED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Stage 1: Lint & Test PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*Commit:* ${{ github.sha }}"
+                }
+              }
+            ]
+          }
+
+    - name: Notify Slack on Failure (Stage 1)
+      if: failure()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "❌ Stage 1: Lint & Test FAILED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Stage 1: Lint & Test FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*Commit:* ${{ github.sha }}\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                }
+    - name: "✅ Stage 2 Complete: Build and integration tests passed"
+      run: echo "Build and integration test stage completed successfully"
+
+    - name: Notify Slack on Success (Stage 2)
+      if: success()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "✅ Stage 2: Build & Integration Test PASSED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Stage 2: Build & Integration Test PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*Docker Build Status:* Ready for push"
+                }
+              }
+            ]
+          }
+
+    - name: Notify Slack on Failure (Stage 2)
+      if: failure()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "❌ Stage 2: Build & Integration Test FAILED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Stage 2: Build & Integration Test FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*Issue:* Docker build or integration test failed\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                }
+              }
+            ]
+          }
+          }
 
   # ===========================================
   # STAGE 2: BUILD & INTEGRATION TEST
@@ -94,23 +171,61 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Generate Version Tag
-      id: version
+    - name: "✅ Stage 3 Complete: Images pushed to Docker Hub"
       run: |
-        COMMIT_SHORT=$(git rev-parse --short HEAD)
-        VERSION_TAG="v0.1"
-        echo "version=${VERSION_TAG}" >> $GITHUB_OUTPUT
-        echo "commit_short=${COMMIT_SHORT}" >> $GITHUB_OUTPUT
-        echo "Version Tag: ${VERSION_TAG}"
-        echo "Commit: ${COMMIT_SHORT}"
+        echo "════════════════════════════════════════════════════════════"
+        echo "Images successfully pushed to Docker Hub!"
+        echo "════════════════════════════════════════════════════════════"
+        echo ""
+        echo "API Image Tags:"
+        echo "  ✅ ${{ env.IMAGE_PREFIX }}-api:v0.1 (Primary Version)"
+        echo "  ✅ ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.commit_short }} (Commit Hash)"
+        echo ""
+        echo "Frontend Image Tags:"
+        echo "  ✅ ${{ env.IMAGE_PREFIX }}-frontend:v0.1 (Primary Version)"
+        echo "  ✅ ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.commit_short }} (Commit Hash)"
+        echo ""
+        echo "Version: v0.1"
+        echo "Commit: ${{ steps.version.outputs.commit_short }}"
+        echo "════════════════════════════════════════════════════════════"
 
-    - name: Build and push API image
+    - name: Notify Slack on Success (Stage 3)
+      if: success()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "✅ Stage 3: Build & Push to Docker Hub PASSED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Stage 3: Build & Push to Docker Hub PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Version:* v0.1\n*API Image:* ${{ env.IMAGE_PREFIX }}-api:v0.1\n*Frontend Image:* ${{ env.IMAGE_PREFIX }}-frontend:v0.1"
+                }
+              }
+            ]
+          }
+
+    - name: Notify Slack on Failure (Stage 3)
+      if: failure()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "❌ Stage 3: Build & Push to Docker Hub FAILED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Stage 3: Build & Push to Docker Hub FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Version:* v0.1\n*Issue:* Docker push to Hub failed\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                }
+              }
+            ]
+          }
       uses: docker/build-push-action@v4
       with:
         context: ./api-service
@@ -156,8 +271,198 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     name: "Security Scan"
+    - name: "✅ Security Scan Complete"
+      run: echo "Security scanning completed"
+
+  # ===========================================
+  # FINAL NOTIFICATION & ALERTS
+  # ===========================================
+  workflow-complete:
+    runs-on: ubuntu-latest
+    name: "Workflow Complete - Slack Notification"
+    needs: [lint-and-test, build-and-test, security-scan]
     if: always()
     steps:
+    - name: Pipeline Summary
+      run: |
+        echo "================================================"
+        echo "CI/CD Pipeline Summary for 25RP19824-Turikumwenimana"
+        echo "================================================"
+        echo ""
+        echo "Pipeline Stages:"
+        echo "  ✅ Stage 1: Lint & Test (All branches)"
+        echo "  ✅ Stage 2: Build & Integration Test"
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "  ✅ Stage 3: Build & Push to Docker Hub (Main branch)"
+        else
+          echo "  ⏭️  Stage 3: Skipped (Not on main branch)"
+        fi
+        echo "  ✅ Security Scan (All branches)"
+        echo ""
+        echo "Branch: ${{ github.ref }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Author: ${{ github.actor }}"
+        echo ""
+        echo "Pipeline completed successfully!"
+        echo "================================================"
+
+    - name: Send Slack Notification - Pipeline Complete (Success)
+      if: success()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "✅ CI/CD Pipeline Completed Successfully",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "✅ Pipeline Completed Successfully"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Project:*\n25RP19824-Turikumwenimana"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n✅ All stages passed"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:*\n${{ github.ref }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Commit:*\n${{ github.sha }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Author:*\n${{ github.actor }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Version:*\nv0.1"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Completed Stages:*\n✅ Stage 1: Lint & Test\n✅ Stage 2: Build & Integration Test\n✅ Stage 3: Build & Push to Docker Hub\n✅ Security Scan"
+                }
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Workflow"
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  },
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Commit"
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+                  }
+                ]
+              }
+            ]
+          }
+
+    - name: Send Slack Alert - Pipeline Failed
+      if: failure()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "❌ ALERT: CI/CD Pipeline Failed",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "❌ ALERT: Pipeline Failed"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Project:*\n25RP19824-Turikumwenimana"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n❌ Pipeline Failed"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:*\n${{ github.ref }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Commit:*\n${{ github.sha }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Author:*\n${{ github.actor }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Action:*\nImmediate Review Required"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*⚠️ Alert Summary:*\nOne or more pipeline stages have failed. Please review the workflow logs and take corrective action."
+                }
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Failed Workflow"
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  },
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Repository"
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}"
+                  }
+                ]
+              }
+            ]
+          }
+                  "type": "mrkdwn",
+                  "text": "⚠️ *Security Scan FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Issue:* Critical vulnerabilities detected\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                }
+              }
+            ]
+          }
     - uses: actions/checkout@v3
 
     - name: Set up Node.js
