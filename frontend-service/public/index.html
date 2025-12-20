@@ -623,16 +623,24 @@
 
   async function loadSummary() {
     try {
-      const response = await fetch(`${API_BASE}/summary`, {
+      // Fetch all expenses and calculate summary
+      const response = await fetch(`${API_BASE}/expenses`, {
         headers: { 'Authorization': `Bearer ${currentToken}` }
       });
 
-      if (!response.ok) throw new Error('Failed to load summary');
+      if (!response.ok) throw new Error('Failed to load expenses');
 
       const data = await response.json();
-      const total = data.totalAmount || 0;
-      const count = data.count || 0;
-      const avg = count > 0 ? (total / count).toFixed(2) : 0;
+      const expenses = Array.isArray(data) ? data : (data.expenses || []);
+      
+      // Calculate summary from expenses
+      let total = 0;
+      expenses.forEach(expense => {
+        total += parseFloat(expense.amount || 0);
+      });
+      
+      const count = expenses.length;
+      const avg = count > 0 ? (total / count).toFixed(2) : '0.00';
 
       document.getElementById('summary').innerHTML = `
         <div class="summary-item">
@@ -648,6 +656,24 @@
           <span class="summary-value">$${avg}</span>
         </div>
       `;
+    } catch (err) {
+      console.error('Error loading summary:', err);
+      document.getElementById('summary').innerHTML = `
+        <div class="summary-item">
+          <span class="summary-label">Total Expenses</span>
+          <span class="summary-value">$0.00</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Number of Expenses</span>
+          <span class="summary-value">0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Average Expense</span>
+          <span class="summary-value">$0.00</span>
+        </div>
+      `;
+    }
+  }
     } catch (err) {
       console.error('Error loading summary:', err);
     }
