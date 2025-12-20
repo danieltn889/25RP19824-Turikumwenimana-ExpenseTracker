@@ -243,34 +243,207 @@ kubectl top nodes
 
 ### Docker Compose Scale
 ```bash
-docker-compose up -d --scale api=3
+# Scale API service
+docker-compose up -d --scale api=5
+
+# Scale using deployment script
+./scripts/deploy.sh docker scale api 5
 ```
 
 ### Kubernetes Scale
 ```bash
+# Manual scaling
 kubectl scale deployment 25rp19824-turikumwenimana-api --replicas=5 -n 25rp19824-turikumwenimana
+
+# Using deployment script
+./scripts/deploy.sh kubernetes scale api 5
+
+# Enable HorizontalPodAutoscaler (automatic scaling)
+kubectl apply -f kubernetes/hpa.yaml
+
+# Check HPA status
+kubectl get hpa -n 25rp19824-turikumwenimana
 ```
+
+### Scaling Guidelines
+- **API Service**: 2-10 replicas (based on CPU/memory usage)
+- **Frontend Service**: 2-8 replicas (lighter load)
+- **Database**: Single replica with read replicas for high availability
 
 ---
 
-## Backup & Recovery
+## Rollback & Recovery
 
-### Database Backup
+### Automated Rollback Scripts
+
+#### Kubernetes Rollback
 ```bash
-docker exec 25rp19824-turikumwenimana-db pg_dump -U expenseuser expensedb > backup.sql
+# Rollback all services
+./scripts/rollback-k8s.sh all
+
+# Rollback specific service
+./scripts/rollback-k8s.sh api
+./scripts/rollback-k8s.sh frontend
+./scripts/rollback-k8s.sh database
 ```
 
-### Database Restore
+#### Docker Compose Rollback
 ```bash
+# Using deployment script
+./scripts/deploy.sh docker rollback
+```
+
+#### Terraform Rollback
+```bash
+cd terraform
+terraform destroy -auto-approve
+```
+
+### Manual Rollback Procedures
+
+#### Kubernetes Manual Rollback
+```bash
+# Check deployment history
+kubectl rollout history deployment/25rp19824-turikumwenimana-api -n 25rp19824-turikumwenimana
+
+# Rollback to previous version
+kubectl rollout undo deployment/25rp19824-turikumwenimana-api -n 25rp19824-turikumwenimana
+
+# Rollback to specific revision
+kubectl rollout undo deployment/25rp19824-turikumwenimana-api --to-revision=2 -n 25rp19824-turikumwenimana
+
+# Check rollback status
+kubectl rollout status deployment/25rp19824-turikumwenimana-api -n 25rp19824-turikumwenimana
+```
+
+#### Docker Compose Manual Rollback
+```bash
+# Stop current deployment
+docker-compose down
+
+# Restore from backup (if available)
+cp docker-compose.backup.YYYYMMDD_HHMMSS docker-compose.yml
+docker-compose up -d
+```
+
+### Recovery Procedures
+
+#### Database Recovery
+```bash
+# Create backup
+docker exec 25rp19824-turikumwenimana-db pg_dump -U expenseuser expensedb > backup.sql
+
+# Restore from backup
 cat backup.sql | docker exec -i 25rp19824-turikumwenimana-db psql -U expenseuser expensedb
 ```
 
+#### Service Recovery
+```bash
+# Restart specific service
+docker-compose restart api
+
+# Restart all services
+docker-compose restart
+
+# Force recreation
+docker-compose up -d --force-recreate
+```
+
+### Health Checks & Monitoring
+
+#### Continuous Health Monitoring
+```bash
+# Run health checks
+./scripts/health-check.sh
+
+# Using deployment script
+./scripts/deploy.sh docker health
+./scripts/deploy.sh kubernetes health
+```
+
+#### Monitoring Commands
+```bash
+# Docker monitoring
+docker stats
+docker-compose logs -f
+
+# Kubernetes monitoring
+kubectl top pods -n 25rp19824-turikumwenimana
+kubectl logs -f deployment/25rp19824-turikumwenimana-api -n 25rp19824-turikumwenimana
+```
+
 ---
 
-## Performance Optimization
+## Deployment Automation
 
-1. Enable resource limits (already configured)
-2. Use read replicas for database
-3. Enable caching on frontend
-4. Use CDN for static files
-5. Monitor and scale based on metrics
+### Using the Unified Deployment Script
+
+The `scripts/deploy.sh` script provides a unified interface for all deployment methods:
+
+```bash
+# Docker Compose deployment
+./scripts/deploy.sh docker deploy
+
+# Kubernetes deployment
+./scripts/deploy.sh kubernetes deploy
+
+# Terraform deployment
+./scripts/deploy.sh terraform deploy
+
+# Ansible deployment
+./scripts/deploy.sh ansible deploy
+
+# Check status
+./scripts/deploy.sh docker status
+./scripts/deploy.sh kubernetes status
+
+# Run health checks
+./scripts/deploy.sh docker health
+
+# Scale services
+./scripts/deploy.sh kubernetes scale api 5
+
+# Rollback
+./scripts/deploy.sh kubernetes rollback
+```
+
+### CI/CD Integration
+
+The deployment scripts are designed to work with CI/CD pipelines:
+
+```yaml
+# In GitHub Actions
+- name: Deploy to Kubernetes
+  run: |
+    chmod +x scripts/deploy.sh
+    ./scripts/deploy.sh kubernetes deploy
+
+- name: Run Health Checks
+  run: ./scripts/deploy.sh kubernetes health
+
+- name: Rollback on Failure
+  if: failure()
+  run: ./scripts/deploy.sh kubernetes rollback
+```
+
+---
+
+## High Availability & Disaster Recovery
+
+### Multi-Environment Deployment
+- **Development**: Docker Compose on local machine
+- **Staging**: Kubernetes with HPA enabled
+- **Production**: Kubernetes with full monitoring and backup
+
+### Backup Strategy
+1. **Database**: Daily automated backups using cron jobs
+2. **Configuration**: Git version control for all manifests
+3. **Images**: Docker Hub registry with multiple tags
+4. **Data**: Persistent volumes with replication
+
+### Disaster Recovery Plan
+1. **Detection**: Automated health checks every 5 minutes
+2. **Isolation**: Scale down affected services
+3. **Recovery**: Automated rollback to last known good state
+4. **Restoration**: Restore from backups if needed
+5. **Verification**: Full health check before resuming traffic

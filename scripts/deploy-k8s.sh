@@ -42,12 +42,18 @@ echo "[6/7] Applying ingress..."
 kubectl apply -f kubernetes/ingress.yaml || echo "Ingress already exists"
 echo "✓ Ingress applied"
 
+# Apply HorizontalPodAutoscalers for scalability
+echo "[7/7] Applying HorizontalPodAutoscalers..."
+kubectl apply -f kubernetes/hpa.yaml || echo "HPA already exists"
+echo "✓ HorizontalPodAutoscalers applied"
+
 # Display status
-echo "[7/7] Displaying deployment status..."
+echo "[8/8] Displaying deployment status..."
 kubectl get all -n $NAMESPACE
 echo ""
 echo "=========================================="
 echo "✓ Kubernetes Deployment Complete!"
+echo "✓ Auto-scaling enabled via HPA"
 echo "=========================================="
 kubectl get svc -n $NAMESPACE
 echo "=========================================="

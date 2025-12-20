@@ -6,6 +6,7 @@
     project_name: 25rp19824-turikumwenimana
     app_path: /opt/{{ project_name }}
     docker_compose_version: "2.15.1"
+    rollback_on_failure: true
 
   tasks:
     - name: Create application directory
@@ -35,6 +36,20 @@
     - name: Pull latest images
       shell: docker pull postgres:15-alpine && docker pull danieltn889/25rp19824-turikumwenimana-api:latest && docker pull danieltn889/25rp19824-turikumwenimana-frontend:latest
       ignore_errors: yes
+      register: pull_result
+
+    - name: Display pull result
+      debug:
+        msg: "{{ pull_result.stdout }}"
+
+    - name: Backup current deployment (if exists)
+      shell: |
+        cd {{ app_path }}
+        if [ -f "docker-compose.yml" ]; then
+          cp docker-compose.yml docker-compose.backup.$(date +%Y%m%d_%H%M%S)
+          echo "Backup created"
+        fi
+      ignore_errors: yes
 
     - name: Start services with docker-compose
       shell: |
@@ -55,7 +70,39 @@
       until: api_health.status == 200
       retries: 30
       delay: 10
+      ignore_errors: "{{ not rollback_on_failure }}"
+
+    - name: Rollback on API failure
+      shell: |
+        cd {{ app_path }}
+        echo "API failed health check, rolling back..."
+        docker-compose down
+        # Find and restore latest backup
+        LATEST_BACKUP=$(ls -t docker-compose.backup.* 2>/dev/null | head -1)
+        if [ -n "$LATEST_BACKUP" ]; then
+          cp "$LATEST_BACKUP" docker-compose.yml
+          docker-compose up -d
+          echo "Rolled back to previous version"
+        else
+          echo "No backup found, starting fresh"
+          docker-compose up -d
+        fi
+      when: api_health.status != 200 and rollback_on_failure
+      ignore_errors: yes
 
     - name: Display API status
       debug:
         msg: "API is healthy: {{ api_health.json }}"
+      when: api_health.status == 200
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ============================================
+          Deployment Summary - {{ project_name }}
+          ============================================
+          Status: {% if api_health.status == 200 %}SUCCESS{% else %}FAILED{% endif %}
+          API Health: {{ api_health.status | default('Unknown') }}
+          Services: docker-compose ps
+          Logs: docker-compose logs --tail=50
+          ============================================
