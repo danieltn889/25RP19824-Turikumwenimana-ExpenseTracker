@@ -430,12 +430,195 @@ jobs:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # ===========================================
-  # STAGE 5: WORKFLOW COMPLETE - Final summary
+  # STAGE 5: DEPLOY APPLICATION - Runs after Stage 4 (Main branch only)
+  # ===========================================
+  deploy-application:
+    runs-on: ubuntu-latest
+    name: "Stage 5: Deploy Application"
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Make deployment scripts executable
+      run: chmod +x scripts/deploy.sh scripts/deploy-k8s.sh scripts/rollback-k8s.sh
+
+    - name: Deploy to Kubernetes
+      run: |
+        echo "🚀 Starting automated deployment..."
+        ./scripts/deploy.sh kubernetes deploy
+
+    - name: Run post-deployment health checks
+      run: |
+        echo "🔍 Running health checks after deployment..."
+        ./scripts/deploy.sh kubernetes health
+
+    - name: Deployment Complete
+      run: |
+        echo "✅ Application successfully deployed!"
+        echo "🌐 API Endpoint: http://localhost:3000"
+        echo "🌐 Frontend Endpoint: http://localhost"
+        echo "📊 Check deployment status: ./scripts/deploy.sh kubernetes status"
+
+    - name: Notify Slack on Deployment Success
+      if: success()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "🚀 Stage 5: Deploy Application SUCCESSFUL",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "🚀 Deployment Completed Successfully"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Project:*\n25RP19824-Turikumwenimana"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n✅ Deployment Successful"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:*\n${{ github.ref }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Version:*\nv0.1"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*API Endpoint:*\nhttp://localhost:3000"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Frontend Endpoint:*\nhttp://localhost"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Deployment Features:*\n✅ Automated deployment with rollback\n✅ Health checks passed\n✅ HorizontalPodAutoscalers enabled\n✅ Production-ready configuration"
+                }
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Deployment"
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  },
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Check Status"
+                    },
+                    "url": "http://localhost:3000/health"
+                  }
+                ]
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify Slack on Deployment Failure
+      if: failure()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "❌ ALERT: Stage 5: Deploy Application FAILED",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "❌ ALERT: Deployment Failed"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Project:*\n25RP19824-Turikumwenimana"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n❌ Deployment Failed"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:*\n${{ github.ref }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Action:*\nRollback initiated automatically"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*⚠️ Automatic Recovery:*\nAttempting automatic rollback to previous stable version..."
+                }
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Failed Deployment"
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  },
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Repository"
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}"
+                  }
+                ]
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Automatic Rollback on Deployment Failure
+      if: failure()
+      run: |
+        echo "🔄 Initiating automatic rollback..."
+        ./scripts/deploy.sh kubernetes rollback || echo "Rollback completed with warnings"
+
+  # ===========================================
+  # STAGE 6: WORKFLOW COMPLETE - Final summary
   # ===========================================
   workflow-complete:
     runs-on: ubuntu-latest
-    name: "Stage 5: Workflow Complete"
-    needs: [code-quality, security-scan, test-code, build-and-test, build-and-push]
+    name: "Stage 6: Workflow Complete"
+    needs: [code-quality, security-scan, test-code, build-and-test, build-and-push, deploy-application]
     if: always()
     steps:
     - name: Pipeline Summary
@@ -449,8 +632,10 @@ jobs:
         echo "Stage 3: Build & Integration Test - ${{ needs.build-and-test.result }}"
         if [ "${{ github.ref }}" == "refs/heads/main" ]; then
           echo "Stage 4: Build & Push to Docker Hub - ${{ needs.build-and-push.result }}"
+          echo "Stage 5: Deploy Application - ${{ needs.deploy-application.result }}"
         else
           echo "Stage 4: Build & Push - skipped (not main branch)"
+          echo "Stage 5: Deploy Application - skipped (not main branch)"
         fi
         echo "================================================"
         echo "Branch: ${{ github.ref }}"
@@ -459,7 +644,7 @@ jobs:
         echo "================================================"
 
     - name: Send Slack Notification - Pipeline Complete (Success)
-      if: needs.code-quality.result == 'success' && needs.security-scan.result == 'success' && needs.test-code.result == 'success' && needs.build-and-test.result == 'success' && (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
+      if: needs.code-quality.result == 'success' && needs.security-scan.result == 'success' && needs.test-code.result == 'success' && needs.build-and-test.result == 'success' && (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped') && (needs.deploy-application.result == 'success' || needs.deploy-application.result == 'skipped')
       uses: slackapi/slack-github-action@v1.24.0
       with:
         payload: |
@@ -506,7 +691,14 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Pipeline Stages:*\n✅ Stage 1: Code Quality & Security (Parallel)\n✅ Stage 2: Test Code\n✅ Stage 3: Build & Integration Test\n✅ Stage 4: Build & Push to Docker Hub\n✅ Stage 5: Workflow Complete"
+                  "text": "*Pipeline Stages:*\n✅ Stage 1: Code Quality & Security (Parallel)\n✅ Stage 2: Test Code\n✅ Stage 3: Build & Integration Test\n✅ Stage 4: Build & Push to Docker Hub\n✅ Stage 5: Deploy Application\n✅ Stage 6: Workflow Complete"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*🚀 Application Status:*\n${{ needs.deploy-application.result == 'success' && '✅ Successfully deployed to production\n🌐 API: http://localhost:3000\n🌐 Frontend: http://localhost' || '⏭️ Deployment skipped (not main branch)' }}"
                 }
               },
               {
@@ -527,6 +719,14 @@ jobs:
                       "text": "View Commit"
                     },
                     "url": "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+                  },
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Check Application"
+                    },
+                    "url": "http://localhost:3000/health"
                   }
                 ]
               }
@@ -536,7 +736,7 @@ jobs:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
     - name: Send Slack Alert - Pipeline Failed
-      if: needs.code-quality.result == 'failure' || needs.security-scan.result == 'failure' || needs.test-code.result == 'failure' || needs.build-and-test.result == 'failure' || needs.build-and-push.result == 'failure'
+      if: needs.code-quality.result == 'failure' || needs.security-scan.result == 'failure' || needs.test-code.result == 'failure' || needs.build-and-test.result == 'failure' || needs.build-and-push.result == 'failure' || needs.deploy-application.result == 'failure'
       uses: slackapi/slack-github-action@v1.24.0
       with:
         payload: |
@@ -583,7 +783,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Failed Stages:*\n${{ needs.code-quality.result == 'failure' && '❌ Stage 1a: Code Quality\n' || '' }}${{ needs.security-scan.result == 'failure' && '❌ Stage 1b: Security Scan\n' || '' }}${{ needs.test-code.result == 'failure' && '❌ Stage 2: Test Code\n' || '' }}${{ needs.build-and-test.result == 'failure' && '❌ Stage 3: Build & Integration Test\n' || '' }}${{ needs.build-and-push.result == 'failure' && '❌ Stage 4: Build & Push to Docker Hub\n' || '' }}"
+                  "text": "*Failed Stages:*\n${{ needs.code-quality.result == 'failure' && '❌ Stage 1a: Code Quality\n' || '' }}${{ needs.security-scan.result == 'failure' && '❌ Stage 1b: Security Scan\n' || '' }}${{ needs.test-code.result == 'failure' && '❌ Stage 2: Test Code\n' || '' }}${{ needs.build-and-test.result == 'failure' && '❌ Stage 3: Build & Integration Test\n' || '' }}${{ needs.build-and-push.result == 'failure' && '❌ Stage 4: Build & Push to Docker Hub\n' || '' }}${{ needs.deploy-application.result == 'failure' && '❌ Stage 5: Deploy Application\n' || '' }}"
                 }
               },
               {
