@@ -94,13 +94,22 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
+    - name: Generate Version Tag
+      id: version
+      run: |
+        COMMIT_SHORT=$(git rev-parse --short HEAD)
+        VERSION_TAG="v$(date +%Y.%m.%d)-${COMMIT_SHORT}"
+        echo "version=${VERSION_TAG}" >> $GITHUB_OUTPUT
+        echo "commit_short=${COMMIT_SHORT}" >> $GITHUB_OUTPUT
+
     - name: Build and push API
       uses: docker/build-push-action@v4
       with:
         context: ./api-service
         push: true
         tags: |
-          ${{ env.IMAGE_PREFIX }}-api:${{ github.sha }}
+          ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.version }}
+          ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.commit_short }}
           ${{ env.IMAGE_PREFIX }}-api:latest
         cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-api:buildcache
         cache-to: type=registry,ref=${{ env.IMAGE_PREFIX }}-api:buildcache,mode=max
@@ -128,7 +137,8 @@ jobs:
         context: ./frontend-service
         push: true
         tags: |
-          ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+          ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.version }}
+          ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.commit_short }}
           ${{ env.IMAGE_PREFIX }}-frontend:latest
         cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-frontend:buildcache
         cache-to: type=registry,ref=${{ env.IMAGE_PREFIX }}-frontend:buildcache,mode=max
