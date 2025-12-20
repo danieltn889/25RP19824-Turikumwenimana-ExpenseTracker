@@ -38,20 +38,20 @@ const httpRequestTotal = new promClient.Counter({
   registers: [register]
 });
 
-const dbConnectionPoolSize = new promClient.Gauge({
-  name: 'db_connection_pool_size',
-  help: 'Number of active database connections in pool',
-  registers: [register]
-});
-
-const dbQueryErrors = new promClient.Counter({
-  name: 'db_query_errors_total',
-  help: 'Total number of database query errors',
-  labelNames: ['query_type'],
-  registers: [register]
-});
-
 // Prometheus metrics for future use
+// const dbConnectionPoolSize = new promClient.Gauge({
+//   name: 'db_connection_pool_size',
+//   help: 'Number of active database connections in pool',
+//   registers: [register]
+// });
+
+// const dbQueryErrors = new promClient.Counter({
+//   name: 'db_query_errors_total',
+//   help: 'Total number of database query errors',
+//   labelNames: ['query_type'],
+//   registers: [register]
+// });
+
 // const dbQueryDuration = new promClient.Histogram({
 //   name: 'db_query_duration_ms',
 //   help: 'Duration of database queries in ms',
