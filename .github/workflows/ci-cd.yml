@@ -51,7 +51,7 @@ jobs:
         npm test || echo "Developer branch tests completed"
 
     - name: Developer branch ready for backup
-      run: echo "Developer branch ready - next step: merge to backup"
+      run: echo Developer branch ready
 
   # Backup branch: Full build and integration tests
   build-backup:
@@ -74,7 +74,7 @@ jobs:
         npm test || echo "Backup branch tests completed"
 
     - name: Backup branch ready for production
-      run: echo "Backup branch ready - next step: merge to main"
+      run: echo Backup branch ready
 
   # Main branch: Build and push to Docker Hub
   build-api:
