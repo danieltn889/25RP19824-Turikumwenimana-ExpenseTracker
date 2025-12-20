@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const { v4: uuidv4 } = require('uuid');
 // const { query } = require('./db');
@@ -48,12 +47,6 @@ const activeUsers = new promClient.Gauge({
 const totalExpenses = new promClient.Gauge({
   name: 'total_expenses_count',
   help: 'Total number of expenses in the system'
-});
-
-const dbQueryDuration = new promClient.Histogram({
-  name: 'db_query_duration_seconds',
-  help: 'Duration of database queries in seconds',
-  labelNames: ['query_type']
 });
 
 require('dotenv').config();
@@ -241,29 +234,8 @@ app.post('/api/v1/expenses', authenticateToken, async (req, res) => {
 app.get('/api/v1/expenses', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { startDate, endDate, category } = req.query;
-    let whereClause = 'WHERE e.user_id = $1';
-    let params = [userId];
-    let paramCount = 1;
-
-    if (startDate) {
-      paramCount++;
-      whereClause += ` AND e.created_at >= $${paramCount}`;
-      params.push(new Date(startDate));
-    }
-
-    if (endDate) {
-      paramCount++;
-      whereClause += ` AND e.created_at <= $${paramCount}`;
-      params.push(new Date(endDate));
-    }
-
-    if (category) {
-      paramCount++;
-      whereClause += ` AND e.category = $${paramCount}`;
-      params.push(category);
-    }
-
+    
+    // Simple query - get all expenses for the user
     const result = await query(
       `SELECT * FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`,
       [userId]
