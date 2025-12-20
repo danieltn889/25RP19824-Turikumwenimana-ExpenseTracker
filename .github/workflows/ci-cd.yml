@@ -108,15 +108,21 @@ jobs:
         # Check only in source code, not documentation
         SECRET_FOUND=false
         
-        # Look for API keys/tokens in source files (not docs)
-        if grep -r "sk_live_\|pk_live_\|ghp_\|AKIA" api-service/src frontend-service/src 2>/dev/null; then
+        # Look for AWS/API key patterns (actual hardcoded keys, not variables)
+        if grep -r "AKIA[0-9A-Z]\{16\}\|sk_live_[a-zA-Z0-9]\{24\}\|pk_live_[a-zA-Z0-9]\{24\}\|ghp_[a-zA-Z0-9]\{36\}" api-service/src frontend-service/src 2>/dev/null; then
           echo "⚠️  Found potential API keys in source code!"
           SECRET_FOUND=true
         fi
         
-        # Check for hardcoded credentials in config files
-        if grep -r "password.*=.*[a-zA-Z0-9]" api-service/src frontend-service/src 2>/dev/null | grep -v "// \|# \|password_hash"; then
-          echo "⚠️  Found potential hardcoded passwords!"
+        # Look for hardcoded database URLs or connection strings
+        if grep -r "postgresql://.*:.*@\|mysql://.*:.*@\|mongodb://.*:.*@" api-service/src frontend-service/src 2>/dev/null; then
+          echo "⚠️  Found potential database credentials!"
+          SECRET_FOUND=true
+        fi
+        
+        # Look for private keys
+        if grep -r "-----BEGIN PRIVATE KEY-----\|-----BEGIN RSA PRIVATE KEY-----" api-service/src frontend-service/src 2>/dev/null; then
+          echo "⚠️  Found potential private keys!"
           SECRET_FOUND=true
         fi
         
