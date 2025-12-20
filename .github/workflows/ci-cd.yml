@@ -104,10 +104,11 @@ jobs:
       id: version
       run: |
         COMMIT_SHORT=$(git rev-parse --short HEAD)
-        VERSION_TAG="v$(date +%Y.%m.%d)-${COMMIT_SHORT}"
+        VERSION_TAG="v0.1"
         echo "version=${VERSION_TAG}" >> $GITHUB_OUTPUT
         echo "commit_short=${COMMIT_SHORT}" >> $GITHUB_OUTPUT
         echo "Version Tag: ${VERSION_TAG}"
+        echo "Commit: ${COMMIT_SHORT}"
 
     - name: Build and push API image
       uses: docker/build-push-action@v4
@@ -115,9 +116,8 @@ jobs:
         context: ./api-service
         push: true
         tags: |
-          ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.version }}
+          ${{ env.IMAGE_PREFIX }}-api:v0.1
           ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.commit_short }}
-          ${{ env.IMAGE_PREFIX }}-api:latest
         cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-api:buildcache
         cache-to: type=registry,ref=${{ env.IMAGE_PREFIX }}-api:buildcache,mode=max
 
@@ -127,24 +127,28 @@ jobs:
         context: ./frontend-service
         push: true
         tags: |
-          ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.version }}
+          ${{ env.IMAGE_PREFIX }}-frontend:v0.1
           ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.commit_short }}
-          ${{ env.IMAGE_PREFIX }}-frontend:latest
         cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-frontend:buildcache
         cache-to: type=registry,ref=${{ env.IMAGE_PREFIX }}-frontend:buildcache,mode=max
 
     - name: "✅ Stage 3 Complete: Images pushed to Docker Hub"
       run: |
+        echo "════════════════════════════════════════════════════════════"
         echo "Images successfully pushed to Docker Hub!"
+        echo "════════════════════════════════════════════════════════════"
+        echo ""
         echo "API Image Tags:"
-        echo "  - ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.version }}"
-        echo "  - ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.commit_short }}"
-        echo "  - ${{ env.IMAGE_PREFIX }}-api:latest"
+        echo "  ✅ ${{ env.IMAGE_PREFIX }}-api:v0.1 (Primary Version)"
+        echo "  ✅ ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.commit_short }} (Commit Hash)"
         echo ""
         echo "Frontend Image Tags:"
-        echo "  - ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.version }}"
-        echo "  - ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.commit_short }}"
-        echo "  - ${{ env.IMAGE_PREFIX }}-frontend:latest"
+        echo "  ✅ ${{ env.IMAGE_PREFIX }}-frontend:v0.1 (Primary Version)"
+        echo "  ✅ ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.commit_short }} (Commit Hash)"
+        echo ""
+        echo "Version: v0.1"
+        echo "Commit: ${{ steps.version.outputs.commit_short }}"
+        echo "════════════════════════════════════════════════════════════"
 
   # ===========================================
   # SECURITY SCAN (All branches)
