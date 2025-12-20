@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: 25rp19824-turikumwenimana-ingress
+  namespace: 25rp19824-turikumwenimana
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: expense-tracker.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: 25rp19824-turikumwenimana-frontend
+            port:
+              number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: 25rp19824-turikumwenimana-api
+            port:
+              number: 3000

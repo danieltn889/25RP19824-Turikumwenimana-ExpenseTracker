@@ -15,6 +15,47 @@ const {
   changePassword
 } = require('./auth');
 
+// Prometheus metrics
+const promClient = require('prom-client');
+const register = new promClient.Registry();
+
+// Default metrics
+promClient.collectDefaultMetrics({ register });
+
+// Custom metrics
+const httpRequestDuration = new promClient.Histogram({
+  name: 'http_request_duration_ms',
+  help: 'Duration of HTTP requests in ms',
+  labelNames: ['method', 'route', 'status_code'],
+  registers: [register]
+});
+
+const httpRequestTotal = new promClient.Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+  labelNames: ['method', 'route', 'status_code'],
+  registers: [register]
+});
+
+const dbQueryDuration = new promClient.Histogram({
+  name: 'db_query_duration_ms',
+  help: 'Duration of database queries in ms',
+  labelNames: ['query_type'],
+  registers: [register]
+});
+
+const activeUsers = new promClient.Gauge({
+  name: 'active_users',
+  help: 'Number of active users',
+  registers: [register]
+});
+
+const totalExpenses = new promClient.Gauge({
+  name: 'total_expenses',
+  help: 'Total number of expenses',
+  registers: [register]
+});
+
 require('dotenv').config();
 
 const app = express();
@@ -34,6 +75,17 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Prometheus metrics middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    httpRequestDuration.labels(req.method, req.route?.path || req.path, res.statusCode).observe(duration);
+    httpRequestTotal.labels(req.method, req.route?.path || req.path, res.statusCode).inc();
+  });
+  next();
+});
+
 // ============ HEALTH CHECK ============
 app.get('/health', (req, res) => {
   logger.info('Health check requested');
@@ -43,6 +95,12 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
+});
+
+// ============ PROMETHEUS METRICS ============
+app.get('/metrics', (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(register.metrics());
 });
 
 // ============ AUTHENTICATION ENDPOINTS ============

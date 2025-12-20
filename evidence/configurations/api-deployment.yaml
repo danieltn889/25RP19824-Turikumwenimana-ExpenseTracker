@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 25rp19824-turikumwenimana-api
+  namespace: 25rp19824-turikumwenimana
+  labels:
+    app: 25rp19824-turikumwenimana-api
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: 25rp19824-turikumwenimana-api
+  template:
+    metadata:
+      labels:
+        app: 25rp19824-turikumwenimana-api
+        version: v1
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - 25rp19824-turikumwenimana-api
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: api
+        image: danieltn889/25rp19824-turikumwenimana-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: 25rp19824-turikumwenimana-db-secret
+              key: db-host
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: 25rp19824-turikumwenimana-db-secret
+              key: db-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: 25rp19824-turikumwenimana-db-secret
+              key: db-password
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: 25rp19824-turikumwenimana-db-secret
+              key: db-name
+        - name: PORT
+          value: "3000"
+        - name: NODE_ENV
+          value: production
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: 25rp19824-turikumwenimana-api
+  namespace: 25rp19824-turikumwenimana
+  labels:
+    app: 25rp19824-turikumwenimana-api
+spec:
+  type: ClusterIP
+  selector:
+    app: 25rp19824-turikumwenimana-api
+  ports:
+  - name: http
+    port: 3000
+    targetPort: http
+    protocol: TCP
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: 25rp19824-turikumwenimana-api
+  namespace: 25rp19824-turikumwenimana
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: 25rp19824-turikumwenimana-api

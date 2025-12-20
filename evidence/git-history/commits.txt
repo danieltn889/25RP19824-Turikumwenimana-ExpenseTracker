@@ -1,0 +1,9 @@
+4902838 Fix YAML parsing error with echo commands
+9517ccd Fix YAML syntax errors in CI/CD workflow
+c823fe4 Update CI/CD with semantic versioning for all branches
+ba04f18 Add semantic versioning to Docker images (v{YYYY.MM.DD}-{COMMIT})
+58fecf1 Add comprehensive user guide with features, responsive design, and troubleshooting
+7e6639f Add modern login/signup modal and responsive dashboard UI with real-time expense tracking
+b523d02 Update CI/CD workflow with branch promotion stages and quick start guide
+af0c6cd Add branch promotion workflow: developer → backup → main with automatic CI/CD
+a2e48ec Initial commit: Complete DevOps project with multi-user authentication

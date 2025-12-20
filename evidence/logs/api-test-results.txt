@@ -1,0 +1,11 @@
+=== API ENDPOINT TEST RESULTS ===
+Date: $(date)
+
+1. HEALTH CHECK TEST
+{"status":"healthy","service":"25rp19824-turikumwenimana-api","timestamp":"2025-12-20T01:00:54.533Z","uptime":1793.018157894}
+2. USER LOGIN TEST
+{"success":true,"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijc0NTQ2YzBiLTIyODQtNGJjOC04YmI3LWY5YTEzNmUyMzAxZCIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlIjoidXNlciIsImlhdCI6MTc2NjE5MjQ1NCwiZXhwIjoxNzY2Mjc4ODU0fQ.ANP3VuvhJ9Ot-MhbS5KYM50PdMySc_NC4e90hAR9tIg","user":{"id":"74546c0b-2284-4bc8-8bb7-f9a136e2301d","username":"testuser","email":"test@example.com","role":"user","full_name":"Test User","profile_image":null}}
+3. GET EXPENSES TEST
+{"error":"Access token required"}
+4. GET SUMMARY TEST
+{"error":"Access token required"}
