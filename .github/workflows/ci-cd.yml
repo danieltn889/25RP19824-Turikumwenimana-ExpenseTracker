@@ -13,11 +13,11 @@ env:
 
 jobs:
   # ===========================================
-  # STAGE 1: LINT & TEST (All branches)
+  # STAGE 1a: CODE QUALITY (Lint) - Runs in Parallel
   # ===========================================
-  lint-and-test:
+  code-quality:
     runs-on: ubuntu-latest
-    name: "Stage 1: Lint & Test"
+    name: "Stage 1: Code Quality & Security - Lint"
     steps:
     - uses: actions/checkout@v3
 
@@ -30,65 +30,214 @@ jobs:
       run: cd api-service && npm install
 
     - name: Lint API
-      run: cd api-service && npm run lint || true
-
-    - name: Test API
-      run: cd api-service && npm test || echo "Tests completed"
+      run: cd api-service && npm run lint
 
     - name: Install Frontend dependencies
-      run: cd frontend-service && npm install || true
+      run: cd frontend-service && npm install
 
-    - name: Build Frontend
-      run: cd frontend-service && npm run build || true
+    - name: Lint Frontend
+      run: cd frontend-service && npm run build
 
-    - name: "✅ Stage 1 Complete: All tests passed"
-      run: echo "Lint and test stage completed successfully"
+    - name: Code Quality Check Complete
+      run: echo "Code quality checks completed successfully"
 
-    - name: Notify Slack on Success (Stage 1)
+    - name: Notify Slack on Success
       if: success()
       uses: slackapi/slack-github-action@v1.24.0
       with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
-            "text": "✅ Stage 1: Lint & Test PASSED",
+            "text": "✅ Stage 1a: Code Quality PASSED",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "✅ *Stage 1: Lint & Test PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*Commit:* ${{ github.sha }}"
+                  "text": "✅ *Stage 1a: Code Quality PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}"
                 }
               }
             ]
           }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-    - name: Notify Slack on Failure (Stage 1)
+    - name: Notify Slack on Failure
       if: failure()
       uses: slackapi/slack-github-action@v1.24.0
       with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
-            "text": "❌ Stage 1: Lint & Test FAILED",
+            "text": "❌ Stage 1a: Code Quality FAILED",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "❌ *Stage 1: Lint & Test FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*Commit:* ${{ github.sha }}\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  "text": "❌ *Stage 1a: Code Quality FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Issue:* Linting failed\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
                 }
               }
             ]
           }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # ===========================================
-  # STAGE 2: BUILD & INTEGRATION TEST
+  # STAGE 1b: SECURITY SCAN - Runs in Parallel with Code Quality
+  # ===========================================
+  security-scan:
+    runs-on: ubuntu-latest
+    name: "Stage 1: Code Quality & Security - Security Scan"
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Run npm audit
+      run: |
+        cd api-service
+        npm install
+        npm audit --audit-level=moderate
+
+    - name: Check for secrets in code
+      run: |
+        if grep -r "password\|secret\|token\|key" *.json *.md 2>/dev/null | grep -v "node_modules"; then
+          echo "Warning: Potential secrets found in code"
+          exit 1
+        else
+          echo "No obvious secrets found"
+        fi
+
+    - name: Scan with Trivy (filesystem)
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+      continue-on-error: true
+
+    - name: Security Scan Complete
+      run: echo "Security scanning completed successfully"
+
+    - name: Notify Slack on Success
+      if: success()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "✅ Stage 1b: Security Scan PASSED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Stage 1b: Security Scan PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Status:* No critical vulnerabilities found"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify Slack on Failure
+      if: failure()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "⚠️ Stage 1b: Security Scan FAILED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "⚠️ *Stage 1b: Security Scan FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Issue:* Vulnerabilities or secrets detected\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ===========================================
+  # STAGE 2: TEST CODE - Runs after Stage 1
+  # ===========================================
+  test-code:
+    runs-on: ubuntu-latest
+    name: "Stage 2: Test Code"
+    needs: [code-quality, security-scan]
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install API dependencies
+      run: cd api-service && npm install
+
+    - name: Run API Tests
+      run: cd api-service && npm test
+
+    - name: Test Code Complete
+      run: echo "Code testing completed successfully"
+
+    - name: Notify Slack on Success
+      if: success()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "✅ Stage 2: Test Code PASSED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Stage 2: Test Code PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*All unit tests passed*"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify Slack on Failure
+      if: failure()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "❌ Stage 2: Test Code FAILED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Stage 2: Test Code FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Issue:* Unit tests failed\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ===========================================
+  # STAGE 3: BUILD & INTEGRATION TEST - Runs after Stage 2
   # ===========================================
   build-and-test:
     runs-on: ubuntu-latest
-    name: "Stage 2: Build & Integration Test"
-    needs: lint-and-test
+    name: "Stage 3: Build & Integration Test"
+    needs: test-code
     steps:
     - uses: actions/checkout@v3
 
@@ -104,65 +253,67 @@ jobs:
       run: |
         cd api-service
         npm install
-        npm test || echo "Integration tests completed"
+        npm test
 
     - name: Build Docker images (test build)
       run: |
         echo "Building API image for testing..."
         cd api-service
-        docker build -t test-api:latest . || echo "API build test completed"
+        docker build -t test-api:latest .
         
         echo "Building Frontend image for testing..."
         cd ../frontend-service
-        docker build -t test-frontend:latest . || echo "Frontend build test completed"
+        docker build -t test-frontend:latest .
 
-    - name: "✅ Stage 2 Complete: Build and integration tests passed"
-      run: echo "Build and integration test stage completed successfully"
+    - name: Build and Integration Test Complete
+      run: echo "Build and integration test completed successfully"
 
-    - name: Notify Slack on Success (Stage 2)
+    - name: Notify Slack on Success
       if: success()
       uses: slackapi/slack-github-action@v1.24.0
       with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
-            "text": "✅ Stage 2: Build & Integration Test PASSED",
+            "text": "✅ Stage 3: Build & Integration Test PASSED",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "✅ *Stage 2: Build & Integration Test PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*Docker Build Status:* Ready for push"
+                  "text": "✅ *Stage 3: Build & Integration Test PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*Docker Build Status:* Ready for push"
                 }
               }
             ]
           }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-    - name: Notify Slack on Failure (Stage 2)
+    - name: Notify Slack on Failure
       if: failure()
       uses: slackapi/slack-github-action@v1.24.0
       with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
-            "text": "❌ Stage 2: Build & Integration Test FAILED",
+            "text": "❌ Stage 3: Build & Integration Test FAILED",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "❌ *Stage 2: Build & Integration Test FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Branch:* ${{ github.ref }}\n*Issue:* Docker build or integration test failed\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  "text": "❌ *Stage 3: Build & Integration Test FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Issue:* Docker build or integration test failed\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
                 }
               }
             ]
           }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # ===========================================
-  # STAGE 3: BUILD & PUSH TO REGISTRY (Main branch only)
+  # STAGE 4: BUILD & PUSH TO DOCKER HUB - Runs after Stage 3 (Main branch only)
   # ===========================================
   build-and-push:
     runs-on: ubuntu-latest
-    name: "Stage 3: Build & Push to Docker Hub"
+    name: "Stage 4: Build & Push to Docker Hub"
     needs: build-and-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -209,185 +360,85 @@ jobs:
         cache-from: type=registry,ref=${{ env.IMAGE_PREFIX }}-frontend:buildcache
         cache-to: type=registry,ref=${{ env.IMAGE_PREFIX }}-frontend:buildcache,mode=max
 
-    - name: "✅ Stage 3 Complete: Images pushed to Docker Hub"
+    - name: Build and Push Complete
       run: |
-        echo "════════════════════════════════════════════════════════════"
-        echo "Images successfully pushed to Docker Hub!"
-        echo "════════════════════════════════════════════════════════════"
-        echo ""
-        echo "API Image Tags:"
-        echo "  ✅ ${{ env.IMAGE_PREFIX }}-api:v0.1 (Primary Version)"
-        echo "  ✅ ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.commit_short }} (Commit Hash)"
-        echo ""
-        echo "Frontend Image Tags:"
-        echo "  ✅ ${{ env.IMAGE_PREFIX }}-frontend:v0.1 (Primary Version)"
-        echo "  ✅ ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.commit_short }} (Commit Hash)"
-        echo ""
-        echo "Version: v0.1"
-        echo "Commit: ${{ steps.version.outputs.commit_short }}"
-        echo "════════════════════════════════════════════════════════════"
+        echo "Images successfully pushed to Docker Hub"
+        echo "API Image: ${{ env.IMAGE_PREFIX }}-api:v0.1"
+        echo "Frontend Image: ${{ env.IMAGE_PREFIX }}-frontend:v0.1"
 
-    - name: Notify Slack on Success (Stage 3)
+    - name: Notify Slack on Success
       if: success()
       uses: slackapi/slack-github-action@v1.24.0
       with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
-            "text": "✅ Stage 3: Build & Push to Docker Hub PASSED",
+            "text": "✅ Stage 4: Build & Push to Docker Hub PASSED",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "✅ *Stage 3: Build & Push to Docker Hub PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Version:* v0.1\n*API Image:* ${{ env.IMAGE_PREFIX }}-api:v0.1\n*Frontend Image:* ${{ env.IMAGE_PREFIX }}-frontend:v0.1"
+                  "text": "✅ *Stage 4: Build & Push to Docker Hub PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Version:* v0.1\n*API Image:* ${{ env.IMAGE_PREFIX }}-api:v0.1\n*Frontend Image:* ${{ env.IMAGE_PREFIX }}-frontend:v0.1"
                 }
               }
             ]
           }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-    - name: Notify Slack on Failure (Stage 3)
+    - name: Notify Slack on Failure
       if: failure()
       uses: slackapi/slack-github-action@v1.24.0
       with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
-            "text": "❌ Stage 3: Build & Push to Docker Hub FAILED",
+            "text": "❌ Stage 4: Build & Push to Docker Hub FAILED",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "❌ *Stage 3: Build & Push to Docker Hub FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Version:* v0.1\n*Issue:* Docker push to Hub failed\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  "text": "❌ *Stage 4: Build & Push to Docker Hub FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Issue:* Docker push to Hub failed\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
                 }
               }
             ]
           }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # ===========================================
-  # STAGE 4: SECURITY SCAN (All branches)
-  # ===========================================
-  security-scan:
-    runs-on: ubuntu-latest
-    name: "Stage 4: Security Scan"
-    if: always()
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
-
-    - name: Run npm audit
-      run: |
-        cd api-service
-        npm install 2>/dev/null || true
-        npm audit --audit-level=moderate 2>/dev/null || echo "Audit completed"
-
-    - name: Check for secrets in code
-      run: |
-        if grep -r "password\|secret\|token\|key" *.json *.md 2>/dev/null | grep -v "node_modules"; then
-          echo "Warning: Potential secrets found in code"
-        else
-          echo "✅ No obvious secrets found"
-        fi
-
-    - name: Scan with Trivy (filesystem)
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-      continue-on-error: true
-
-    - name: Upload Trivy results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: 'trivy-results.sarif'
-      continue-on-error: true
-
-    - name: "✅ Security Scan Complete"
-      run: echo "Security scanning completed"
-
-    - name: Notify Slack on Success (Security Scan)
-      if: success()
-      uses: slackapi/slack-github-action@v1.24.0
-      with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-        payload: |
-          {
-            "text": "✅ Security Scan PASSED",
-            "blocks": [
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "✅ *Security Scan PASSED*\n*Project:* 25RP19824-Turikumwenimana\n*Status:* No critical vulnerabilities found\n*Branch:* ${{ github.ref }}"
-                }
-              }
-            ]
-          }
-
-    - name: Notify Slack on Failure (Security Scan)
-      if: failure()
-      uses: slackapi/slack-github-action@v1.24.0
-      with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-        payload: |
-          {
-            "text": "⚠️ Security Scan FAILED",
-            "blocks": [
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "⚠️ *Security Scan FAILED*\n*Project:* 25RP19824-Turikumwenimana\n*Issue:* Critical vulnerabilities detected\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
-                }
-              }
-            ]
-          }
-
-  # ===========================================
-  # STAGE 5: FINAL NOTIFICATION
+  # STAGE 5: WORKFLOW COMPLETE - Final summary
   # ===========================================
   workflow-complete:
     runs-on: ubuntu-latest
     name: "Stage 5: Workflow Complete"
-    needs: [lint-and-test, build-and-test, security-scan]
+    needs: [code-quality, security-scan, test-code, build-and-test, build-and-push]
     if: always()
     steps:
     - name: Pipeline Summary
       run: |
         echo "================================================"
-        echo "CI/CD Pipeline Summary for 25RP19824-Turikumwenimana"
+        echo "CI/CD Pipeline Summary - 25RP19824-Turikumwenimana"
         echo "================================================"
-        echo ""
-        echo "Pipeline Stages:"
-        echo "  ✅ Stage 1: Lint & Test (All branches)"
-        echo "  ✅ Stage 2: Build & Integration Test"
+        echo "Stage 1a: Code Quality - ${{ needs.code-quality.result }}"
+        echo "Stage 1b: Security Scan - ${{ needs.security-scan.result }}"
+        echo "Stage 2: Test Code - ${{ needs.test-code.result }}"
+        echo "Stage 3: Build & Integration Test - ${{ needs.build-and-test.result }}"
         if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-          echo "  ✅ Stage 3: Build & Push to Docker Hub (Main branch)"
+          echo "Stage 4: Build & Push to Docker Hub - ${{ needs.build-and-push.result }}"
         else
-          echo "  ⏭️  Stage 3: Skipped (Not on main branch)"
+          echo "Stage 4: Build & Push - skipped (not main branch)"
         fi
-        echo "  ✅ Stage 4: Security Scan (All branches)"
-        echo "  ✅ Stage 5: Workflow Complete"
-        echo ""
+        echo "================================================"
         echo "Branch: ${{ github.ref }}"
         echo "Commit: ${{ github.sha }}"
         echo "Author: ${{ github.actor }}"
-        echo ""
-        echo "Pipeline completed successfully!"
         echo "================================================"
 
     - name: Send Slack Notification - Pipeline Complete (Success)
-      if: success()
+      if: needs.code-quality.result == 'success' && needs.security-scan.result == 'success' && needs.test-code.result == 'success' && needs.build-and-test.result == 'success' && (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
       uses: slackapi/slack-github-action@v1.24.0
       with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "✅ CI/CD Pipeline Completed Successfully",
@@ -432,7 +483,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Completed Stages:*\n✅ Stage 1: Lint & Test\n✅ Stage 2: Build & Integration Test\n✅ Stage 3: Build & Push to Docker Hub\n✅ Stage 4: Security Scan"
+                  "text": "*Pipeline Stages:*\n✅ Stage 1: Code Quality & Security (Parallel)\n✅ Stage 2: Test Code\n✅ Stage 3: Build & Integration Test\n✅ Stage 4: Build & Push to Docker Hub\n✅ Stage 5: Workflow Complete"
                 }
               },
               {
@@ -458,12 +509,13 @@ jobs:
               }
             ]
           }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
     - name: Send Slack Alert - Pipeline Failed
-      if: failure()
+      if: needs.code-quality.result == 'failure' || needs.security-scan.result == 'failure' || needs.test-code.result == 'failure' || needs.build-and-test.result == 'failure' || needs.build-and-push.result == 'failure'
       uses: slackapi/slack-github-action@v1.24.0
       with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "❌ ALERT: CI/CD Pipeline Failed",
@@ -508,7 +560,14 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*⚠️ Alert Summary:*\nOne or more pipeline stages have failed. Please review the workflow logs and take corrective action."
+                  "text": "*Failed Stages:*\n${{ needs.code-quality.result == 'failure' && '❌ Stage 1a: Code Quality\n' || '' }}${{ needs.security-scan.result == 'failure' && '❌ Stage 1b: Security Scan\n' || '' }}${{ needs.test-code.result == 'failure' && '❌ Stage 2: Test Code\n' || '' }}${{ needs.build-and-test.result == 'failure' && '❌ Stage 3: Build & Integration Test\n' || '' }}${{ needs.build-and-push.result == 'failure' && '❌ Stage 4: Build & Push to Docker Hub\n' || '' }}"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*⚠️ Alert:*\nOne or more pipeline stages failed. Review logs and take corrective action."
                 }
               },
               {
@@ -534,3 +593,5 @@ jobs:
               }
             ]
           }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
