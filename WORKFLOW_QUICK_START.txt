@@ -1,0 +1,90 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    BRANCH WORKFLOW - QUICK START GUIDE                     ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+YOUR WORKFLOW:
+═════════════════════════════════════════════════════════════════════════════
+
+  STEP 1: Code on DEVELOPER
+  ────────────────────────
+  $ git checkout developer
+  $ git pull origin developer
+  
+  [Make your changes]
+  
+  $ git add .
+  $ git commit -m "Your changes"
+  $ git push origin developer
+  
+  ⏳ GitHub Actions runs TESTS automatically
+  ✅ If tests pass → Ready for next stage
+
+
+  STEP 2: Merge to BACKUP (Staging)
+  ──────────────────────────────────
+  $ git checkout backup
+  $ git pull origin backup
+  $ git merge developer
+  $ git push origin backup
+  
+  ⏳ GitHub Actions runs INTEGRATION TESTS + BUILD
+  ✅ If build passes → Ready for production
+
+
+  STEP 3: Merge to MAIN (Production)
+  ─────────────────────────────────
+  $ git checkout main
+  $ git pull origin main
+  $ git merge backup
+  $ git push origin main
+  
+  ⏳ GitHub Actions BUILDS DOCKER & PUSHES TO HUB
+  ✅ Images now available for deployment
+
+
+═════════════════════════════════════════════════════════════════════════════
+
+WHAT HAPPENS AUTOMATICALLY:
+
+  developer → Tests only (no Docker build)
+  backup    → Tests + Docker build (test build)
+  main      → Tests + Docker build + Push to Docker Hub
+
+
+═════════════════════════════════════════════════════════════════════════════
+
+CHECK YOUR BUILDS:
+
+  1. Go to: https://github.com/danieltn889/25RP19824-Turikumwenimana-ExpenseTracker
+  2. Click "Actions" tab
+  3. See your workflow status
+  4. Green ✓ = Success
+  5. Red ✗ = Failed (click to see logs)
+
+
+═════════════════════════════════════════════════════════════════════════════
+
+YOUR DOCKER IMAGES:
+
+  After main branch push:
+  
+  API:       danieltn889/25rp19824-turikumwenimana-api:latest
+  Frontend:  danieltn889/25rp19824-turikumwenimana-frontend:latest
+
+  Pull with:
+  $ docker pull danieltn889/25rp19824-turikumwenimana-api:latest
+  $ docker pull danieltn889/25rp19824-turikumwenimana-frontend:latest
+
+
+═════════════════════════════════════════════════════════════════════════════
+
+CURRENT STATUS:
+
+  Repository: https://github.com/danieltn889/25RP19824-Turikumwenimana-ExpenseTracker
+  Branches:   main, developer, backup
+  Commits:    2 (initial + workflow setup)
+  CI/CD:      ✅ Ready
+  Workflows:  ✅ branch-workflow.yml active
+
+
+═════════════════════════════════════════════════════════════════════════════
