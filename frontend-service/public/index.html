@@ -3,294 +3,681 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>25RP19824-Turikumwenimana - Expense Tracker</title>
+  <title>Expense Tracker - 25RP19824-Turikumwenimana</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
       padding: 20px;
     }
-    .container {
-      max-width: 1000px;
-      margin: 0 auto;
+
+    /* ============= LOGIN PAGE ============= */
+    #loginPage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .login-container {
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+      animation: slideUp 0.3s ease;
     }
-    h1 {
-      color: #333;
-      margin-bottom: 10px;
-      text-align: center;
+
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
-    .project-id {
+
+    .login-header {
       text-align: center;
-      color: #667eea;
-      font-size: 14px;
       margin-bottom: 30px;
+    }
+
+    .login-header h1 {
+      color: #333;
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+
+    .login-header p {
+      color: #667eea;
+      font-size: 12px;
       font-weight: bold;
     }
+
     .form-group {
-      margin-bottom: 20px;
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr auto;
-      gap: 10px;
-      align-items: end;
+      margin-bottom: 16px;
     }
+
     label {
       display: block;
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 5px;
-      font-weight: bold;
+      color: #555;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
     }
-    input, select {
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    select {
       width: 100%;
-      padding: 10px;
-      border: 2px solid #ddd;
-      border-radius: 5px;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
       font-size: 14px;
       transition: border-color 0.3s;
     }
-    input:focus, select:focus {
+
+    input:focus,
+    select:focus {
       outline: none;
       border-color: #667eea;
     }
+
     button {
-      padding: 10px 20px;
-      background: #667eea;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background: #764ba2;
-    }
-    button:active {
-      transform: scale(0.98);
-    }
-    .expenses-list {
-      margin-top: 30px;
-    }
-    .expense-item {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 100px;
-      gap: 15px;
-      align-items: center;
-      padding: 15px;
-      border: 1px solid #eee;
-      border-radius: 5px;
-      margin-bottom: 10px;
-      background: #f9f9f9;
-    }
-    .expense-item:hover {
-      background: #f0f0f0;
-    }
-    .delete-btn {
-      background: #ff6b6b;
-      padding: 5px 10px;
-      font-size: 12px;
-    }
-    .delete-btn:hover {
-      background: #ff5252;
-    }
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 15px;
-      margin-top: 30px;
-      padding-top: 30px;
-      border-top: 2px solid #eee;
-    }
-    .stat {
+      width: 100%;
+      padding: 12px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 15px;
-      border-radius: 5px;
-      text-align: center;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
     }
-    .stat-label {
+
+    button:hover {
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .form-toggle {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .form-toggle a {
+      color: #667eea;
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .form-toggle a:hover {
+      text-decoration: underline;
+    }
+
+    /* ============= DASHBOARD ============= */
+    #dashboardPage {
+      display: none;
+    }
+
+    .dashboard {
+      max-width: 1200px;
+      margin: 0 auto;
+      animation: slideUp 0.3s ease;
+    }
+
+    .navbar {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .navbar h2 {
+      color: #333;
+      font-size: 20px;
+    }
+
+    .navbar-right {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .user-info {
+      color: #666;
+      font-size: 13px;
+    }
+
+    .logout-btn {
+      background: #ff6b6b;
+      padding: 8px 15px;
+      font-size: 13px;
+      width: auto;
+    }
+
+    .logout-btn:hover {
+      background: #ff5252;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .card h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .add-expense {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .add-expense input,
+    .add-expense select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+    }
+
+    .add-expense button {
+      grid-column: 1 / -1;
+      padding: 10px;
+    }
+
+    .expense-item {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 4px solid #667eea;
+    }
+
+    .expense-info {
+      flex: 1;
+    }
+
+    .expense-desc {
+      color: #333;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .expense-category {
+      color: #999;
       font-size: 12px;
-      opacity: 0.9;
-      margin-bottom: 5px;
     }
-    .stat-value {
-      font-size: 24px;
+
+    .expense-amount {
       font-weight: bold;
+      color: #764ba2;
+      font-size: 16px;
     }
-    .loading {
-      text-align: center;
+
+    .expense-delete {
+      background: #ff6b6b;
+      padding: 6px 12px;
+      font-size: 12px;
+      width: auto;
+      margin-left: 10px;
+    }
+
+    .summary-item {
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .summary-label {
+      color: #666;
+      font-weight: 600;
+    }
+
+    .summary-value {
       color: #667eea;
       font-weight: bold;
     }
+
     .error {
-      background: #ffe6e6;
+      background: #ffe0e0;
       color: #c00;
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 20px;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 13px;
     }
+
     .success {
-      background: #e6ffe6;
-      color: #060;
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 20px;
+      background: #e0ffe0;
+      color: #0a0;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 13px;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #999;
+      padding: 40px 20px;
+    }
+
+    @media (max-width: 768px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .add-expense {
+        grid-template-columns: 1fr;
+      }
+
+      .navbar {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .navbar h2 {
+        width: 100%;
+      }
+
+      .navbar-right {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+
+      .expense-item {
+        flex-direction: column;
+      }
+
+      .expense-delete {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 8px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>💰 Expense Tracker</h1>
-    <div class="project-id">Project: 25RP19824-Turikumwenimana</div>
-    
-    <div id="message"></div>
-    
-    <div class="form-group">
-      <div>
-        <label>Description</label>
-        <input type="text" id="description" placeholder="e.g., Lunch">
-      </div>
-      <div>
-        <label>Amount ($)</label>
-        <input type="number" id="amount" placeholder="0.00" step="0.01">
-      </div>
-      <div>
-        <label>Category</label>
-        <select id="category">
-          <option value="Food">Food</option>
-          <option value="Transport">Transport</option>
-          <option value="Entertainment">Entertainment</option>
-          <option value="Utilities">Utilities</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-      <button onclick="addExpense()">Add Expense</button>
+
+<!-- ============= LOGIN PAGE ============= -->
+<div id="loginPage">
+  <div class="login-container">
+    <div class="login-header">
+      <h1>Expense Tracker</h1>
+      <p>25RP19824-Turikumwenimana</p>
     </div>
 
-    <div class="expenses-list">
-      <h2>Recent Expenses</h2>
-      <div id="expenses" class="loading">Loading expenses...</div>
+    <!-- Login Form -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="loginUsername" placeholder="Enter username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter password">
+      </div>
+      <button onclick="handleLogin()">Login</button>
+      <div class="form-toggle">
+        Don't have account? <a onclick="toggleForm()">Sign Up</a>
+      </div>
     </div>
 
-    <div class="summary">
-      <div class="stat">
-        <div class="stat-label">Total Expenses</div>
-        <div class="stat-value" id="totalCount">0</div>
+    <!-- Signup Form -->
+    <div id="signupForm" style="display:none;">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="signupUsername" placeholder="Choose username">
       </div>
-      <div class="stat">
-        <div class="stat-label">Total Amount</div>
-        <div class="stat-value" id="totalAmount">$0</div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="signupEmail" placeholder="Enter email">
       </div>
-      <div class="stat">
-        <div class="stat-label">Average</div>
-        <div class="stat-value" id="avgAmount">$0</div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="signupFullName" placeholder="Enter full name">
       </div>
-      <div class="stat">
-        <div class="stat-label">Highest</div>
-        <div class="stat-value" id="maxAmount">$0</div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="signupPassword" placeholder="Create password">
+      </div>
+      <button onclick="handleSignup()">Sign Up</button>
+      <div class="form-toggle">
+        Already have account? <a onclick="toggleForm()">Login</a>
+      </div>
+    </div>
+
+    <div id="authError"></div>
+  </div>
+</div>
+
+<!-- ============= DASHBOARD PAGE ============= -->
+<div id="dashboardPage">
+  <div class="dashboard">
+    <!-- Navbar -->
+    <div class="navbar">
+      <h2>💰 Expense Tracker</h2>
+      <div class="navbar-right">
+        <div class="user-info" id="userInfo"></div>
+        <button class="logout-btn" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-grid">
+      <!-- Add Expense -->
+      <div class="card">
+        <h3>Add New Expense</h3>
+        <div id="addError"></div>
+        <div class="add-expense">
+          <input type="text" id="description" placeholder="Description (e.g., Lunch)">
+          <input type="number" id="amount" placeholder="Amount" step="0.01">
+          <select id="category">
+            <option value="Food">Food</option>
+            <option value="Transport">Transport</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Other">Other</option>
+          </select>
+          <button onclick="addExpense()">Add Expense</button>
+        </div>
+
+        <h3>Recent Expenses</h3>
+        <div id="expensesList"></div>
+      </div>
+
+      <!-- Summary -->
+      <div class="card">
+        <h3>Summary</h3>
+        <div id="summary"></div>
       </div>
     </div>
   </div>
+</div>
 
-  <script>
-    const API_URL = '/api/v1';
+<script>
+  const API_BASE = 'http://localhost:3000/api/v1';
+  let currentUser = null;
+  let currentToken = null;
 
-    async function loadExpenses() {
-      try {
-        const response = await fetch(`${API_URL}/expenses`);
-        if (!response.ok) throw new Error('Failed to load expenses');
-        const expenses = await response.json();
-        displayExpenses(expenses);
-      } catch (error) {
-        showMessage(`Error: ${error.message}`, 'error');
-      }
+  // Check if already logged in
+  window.addEventListener('load', () => {
+    const saved = localStorage.getItem('expenseTrackerUser');
+    if (saved) {
+      const { user, token } = JSON.parse(saved);
+      currentUser = user;
+      currentToken = token;
+      showDashboard();
+    }
+  });
+
+  function toggleForm() {
+    document.getElementById('loginForm').style.display = document.getElementById('loginForm').style.display === 'none' ? 'block' : 'none';
+    document.getElementById('signupForm').style.display = document.getElementById('signupForm').style.display === 'none' ? 'block' : 'none';
+    document.getElementById('authError').innerHTML = '';
+  }
+
+  async function handleLogin() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+
+    if (!username || !password) {
+      showError('authError', 'Please fill all fields');
+      return;
     }
 
-    function displayExpenses(expenses) {
-      const container = document.getElementById('expenses');
-      if (expenses.length === 0) {
-        container.innerHTML = '<p>No expenses yet. Add one to get started!</p>';
+    try {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        showError('authError', data.message || 'Login failed');
         return;
       }
-      container.innerHTML = expenses.map(expense => `
-        <div class="expense-item">
-          <div><strong>${expense.description}</strong><br><small>${new Date(expense.created_at).toLocaleDateString()}</small></div>
-          <div>${expense.category}</div>
-          <div style="font-weight: bold;">$${parseFloat(expense.amount).toFixed(2)}</div>
-          <button class="delete-btn" onclick="deleteExpense('${expense.id}')">Delete</button>
-        </div>
-      `).join('');
+
+      currentUser = data.user;
+      currentToken = data.token;
+      localStorage.setItem('expenseTrackerUser', JSON.stringify({ user: data.user, token: data.token }));
+      
+      showDashboard();
+    } catch (err) {
+      showError('authError', 'Connection error: ' + err.message);
+    }
+  }
+
+  async function handleSignup() {
+    const username = document.getElementById('signupUsername').value;
+    const email = document.getElementById('signupEmail').value;
+    const fullName = document.getElementById('signupFullName').value;
+    const password = document.getElementById('signupPassword').value;
+
+    if (!username || !email || !fullName || !password) {
+      showError('authError', 'Please fill all fields');
+      return;
     }
 
-    async function addExpense() {
-      const description = document.getElementById('description').value;
-      const amount = parseFloat(document.getElementById('amount').value);
-      const category = document.getElementById('category').value;
+    try {
+      const response = await fetch(`${API_BASE}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, fullName, password })
+      });
 
-      if (!description || !amount || amount <= 0) {
-        showMessage('Please fill in all fields correctly', 'error');
+      const data = await response.json();
+
+      if (!response.ok) {
+        showError('authError', data.message || 'Signup failed');
         return;
       }
 
-      try {
-        const response = await fetch(`${API_URL}/expenses`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description, amount, category })
-        });
-        if (!response.ok) throw new Error('Failed to add expense');
-        showMessage('Expense added successfully!', 'success');
-        document.getElementById('description').value = '';
-        document.getElementById('amount').value = '';
-        loadExpenses();
-        loadSummary();
-      } catch (error) {
-        showMessage(`Error: ${error.message}`, 'error');
-      }
+      currentUser = data.user;
+      currentToken = data.token;
+      localStorage.setItem('expenseTrackerUser', JSON.stringify({ user: data.user, token: data.token }));
+      
+      showDashboard();
+    } catch (err) {
+      showError('authError', 'Connection error: ' + err.message);
     }
+  }
 
-    async function deleteExpense(id) {
-      if (!confirm('Delete this expense?')) return;
-      try {
-        const response = await fetch(`${API_URL}/expenses/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Failed to delete expense');
-        loadExpenses();
-        loadSummary();
-      } catch (error) {
-        showMessage(`Error: ${error.message}`, 'error');
-      }
-    }
-
-    async function loadSummary() {
-      try {
-        const response = await fetch(`${API_URL}/summary`);
-        if (!response.ok) throw new Error('Failed to load summary');
-        const data = await response.json();
-        document.getElementById('totalCount').textContent = data.total_expenses || 0;
-        document.getElementById('totalAmount').textContent = `$${(data.total_amount || 0).toFixed(2)}`;
-        document.getElementById('avgAmount').textContent = `$${(data.average_amount || 0).toFixed(2)}`;
-        document.getElementById('maxAmount').textContent = `$${(data.max_amount || 0).toFixed(2)}`;
-      } catch (error) {
-        console.error('Error loading summary:', error);
-      }
-    }
-
-    function showMessage(msg, type) {
-      const messageDiv = document.getElementById('message');
-      messageDiv.className = type;
-      messageDiv.textContent = msg;
-      setTimeout(() => messageDiv.textContent = '', 3000);
-    }
-
+  function showDashboard() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('dashboardPage').style.display = 'block';
+    document.getElementById('userInfo').textContent = `👤 ${currentUser.username}`;
     loadExpenses();
     loadSummary();
-    setInterval(loadSummary, 30000);
-  </script>
+  }
+
+  async function addExpense() {
+    const description = document.getElementById('description').value;
+    const amount = document.getElementById('amount').value;
+    const category = document.getElementById('category').value;
+
+    if (!description || !amount) {
+      showError('addError', 'Please fill all fields');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/expenses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentToken}`
+        },
+        body: JSON.stringify({ description, amount: parseFloat(amount), category })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        showError('addError', error.message || 'Failed to add expense');
+        return;
+      }
+
+      document.getElementById('description').value = '';
+      document.getElementById('amount').value = '';
+      loadExpenses();
+      loadSummary();
+      showSuccess('addError', 'Expense added successfully!');
+    } catch (err) {
+      showError('addError', 'Error: ' + err.message);
+    }
+  }
+
+  async function loadExpenses() {
+    try {
+      const response = await fetch(`${API_BASE}/expenses`, {
+        headers: { 'Authorization': `Bearer ${currentToken}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to load expenses');
+
+      const data = await response.json();
+      const expenses = data.expenses || [];
+
+      let html = '';
+      if (expenses.length === 0) {
+        html = '<div class="empty-state">No expenses yet. Add one to get started!</div>';
+      } else {
+        expenses.forEach(exp => {
+          html += `
+            <div class="expense-item">
+              <div class="expense-info">
+                <div class="expense-desc">${exp.description}</div>
+                <div class="expense-category">${exp.category}</div>
+              </div>
+              <div class="expense-amount">$${parseFloat(exp.amount).toFixed(2)}</div>
+              <button class="expense-delete" onclick="deleteExpense('${exp.id}')">Delete</button>
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('expensesList').innerHTML = html;
+    } catch (err) {
+      console.error('Error loading expenses:', err);
+    }
+  }
+
+  async function deleteExpense(id) {
+    if (!confirm('Delete this expense?')) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/expenses/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${currentToken}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete');
+      
+      loadExpenses();
+      loadSummary();
+    } catch (err) {
+      showError('addError', 'Error deleting expense');
+    }
+  }
+
+  async function loadSummary() {
+    try {
+      const response = await fetch(`${API_BASE}/summary`, {
+        headers: { 'Authorization': `Bearer ${currentToken}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to load summary');
+
+      const data = await response.json();
+      const total = data.totalAmount || 0;
+      const count = data.count || 0;
+      const avg = count > 0 ? (total / count).toFixed(2) : 0;
+
+      document.getElementById('summary').innerHTML = `
+        <div class="summary-item">
+          <span class="summary-label">Total Expenses</span>
+          <span class="summary-value">$${total.toFixed(2)}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Number of Expenses</span>
+          <span class="summary-value">${count}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Average Expense</span>
+          <span class="summary-value">$${avg}</span>
+        </div>
+      `;
+    } catch (err) {
+      console.error('Error loading summary:', err);
+    }
+  }
+
+  function handleLogout() {
+    if (!confirm('Logout?')) return;
+    currentUser = null;
+    currentToken = null;
+    localStorage.removeItem('expenseTrackerUser');
+    
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('dashboardPage').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('signupForm').style.display = 'none';
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
+  }
+
+  function showError(elementId, message) {
+    const el = document.getElementById(elementId);
+    el.innerHTML = `<div class="error">${message}</div>`;
+  }
+
+  function showSuccess(elementId, message) {
+    const el = document.getElementById(elementId);
+    el.innerHTML = `<div class="success">${message}</div>`;
+    setTimeout(() => { el.innerHTML = ''; }, 3000);
+  }
+</script>
+
 </body>
 </html>
