@@ -310,7 +310,7 @@ jobs:
       continue-on-error: true
 
     - name: "✅ Security Scan Complete"
-      run: "Security scanning completed"
+      run: echo "Security scanning completed"
 
     - name: Notify Slack on Success (Security Scan)
       if: success()
