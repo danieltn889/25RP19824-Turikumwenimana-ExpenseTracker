@@ -32,6 +32,17 @@ print_header() {
     echo -e "${BLUE}==========================================${NC}"
 }
 
+# Function to get docker-compose command
+get_docker_compose_cmd() {
+    if command -v docker-compose &> /dev/null; then
+        echo "docker-compose"
+    elif docker compose version &> /dev/null; then
+        echo "docker compose"
+    else
+        echo "docker-compose"  # fallback
+    fi
+}
+
 # Function to check prerequisites
 check_prerequisites() {
     local deployment_type=$1
@@ -42,7 +53,8 @@ check_prerequisites() {
                 print_error "Docker is not installed"
                 exit 1
             fi
-            if ! command -v docker-compose &> /dev/null; then
+            # Check for docker-compose (legacy) or docker compose (new)
+            if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
                 print_error "Docker Compose is not installed"
                 exit 1
             fi
@@ -73,12 +85,14 @@ deploy_docker() {
     print_header "Docker Compose Deployment"
 
     cd "$PROJECT_ROOT"
+    
+    local compose_cmd=$(get_docker_compose_cmd)
 
     print_status "Building Docker images..."
-    docker-compose build
+    $compose_cmd build
 
     print_status "Starting services..."
-    docker-compose up -d
+    $compose_cmd up -d
 
     print_status "Waiting for services to be ready..."
     sleep 10
@@ -99,7 +113,7 @@ deploy_docker() {
     fi
 
     print_status "Deployment completed successfully!"
-    docker-compose ps
+    $compose_cmd ps
 }
 
 # Function to deploy with Kubernetes
@@ -180,8 +194,9 @@ rollback_deployment() {
     case $deployment_type in
         "docker")
             cd "$PROJECT_ROOT"
+            local compose_cmd=$(get_docker_compose_cmd)
             print_warning "Rolling back Docker Compose deployment..."
-            docker-compose down
+            $compose_cmd down
             # Restore from backup if available
             print_status "Checking for backup..."
             # Implementation would depend on backup strategy
@@ -215,8 +230,9 @@ scale_services() {
     case $deployment_type in
         "docker")
             cd "$PROJECT_ROOT"
+            local compose_cmd=$(get_docker_compose_cmd)
             print_status "Scaling $service to $replicas replicas..."
-            docker-compose up -d --scale $service=$replicas
+            $compose_cmd up -d --scale $service=$replicas
             ;;
         "kubernetes")
             local namespace="25rp19824-turikumwenimana"
@@ -241,7 +257,8 @@ show_status() {
     case $deployment_type in
         "docker")
             cd "$PROJECT_ROOT"
-            docker-compose ps
+            local compose_cmd=$(get_docker_compose_cmd)
+            $compose_cmd ps
             echo ""
             docker stats --no-stream
             ;;
