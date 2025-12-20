@@ -99,38 +99,37 @@ jobs:
       run: |
         cd api-service
         npm install 2>/dev/null || true
-        npm audit --audit-level=moderate 2>/dev/null || echo "⚠️ Audit warnings found - review needed"
+        npm audit --audit-level=moderate 2>/dev/null || echo "Audit warnings found - review needed"
       continue-on-error: true
 
     - name: Check for secrets in code
       run: |
-        echo "✅ Scanning for hardcoded secrets..."
-        # Check only in source code, not documentation
+        echo "Scanning for hardcoded secrets..."
         SECRET_FOUND=false
         
         # Look for AWS/API key patterns (actual hardcoded keys, not variables)
         if grep -r "AKIA[0-9A-Z]\{16\}\|sk_live_[a-zA-Z0-9]\{24\}\|pk_live_[a-zA-Z0-9]\{24\}\|ghp_[a-zA-Z0-9]\{36\}" api-service/src frontend-service/src 2>/dev/null; then
-          echo "⚠️  Found potential API keys in source code!"
+          echo "Found potential API keys in source code!"
           SECRET_FOUND=true
         fi
         
         # Look for hardcoded database URLs or connection strings
         if grep -r "postgresql://.*:.*@\|mysql://.*:.*@\|mongodb://.*:.*@" api-service/src frontend-service/src 2>/dev/null; then
-          echo "⚠️  Found potential database credentials!"
+          echo "Found potential database credentials!"
           SECRET_FOUND=true
         fi
         
         # Look for private keys
         if grep -r "-----BEGIN PRIVATE KEY-----\|-----BEGIN RSA PRIVATE KEY-----" api-service/src frontend-service/src 2>/dev/null; then
-          echo "⚠️  Found potential private keys!"
+          echo "Found potential private keys!"
           SECRET_FOUND=true
         fi
         
         if [ "$SECRET_FOUND" = true ]; then
-          echo "❌ Security issue: Hardcoded secrets detected"
+          echo "Security issue: Hardcoded secrets detected"
           exit 1
         else
-          echo "✅ No hardcoded secrets found in source code"
+          echo "No hardcoded secrets found in source code"
         fi
 
     - name: Scan with Trivy (filesystem)
@@ -450,63 +449,63 @@ jobs:
 
     - name: Deploy to Kubernetes
       run: |
-        echo "🚀 Starting automated deployment..."
+        echo "Starting automated deployment..."
         ./scripts/deploy.sh kubernetes deploy
 
     - name: Run post-deployment health checks
+      id: health-check
       run: |
-        echo "🔍 Running comprehensive health checks after deployment..."
+        echo "Running comprehensive health checks after deployment..."
         
         # API Health Check
         echo "Checking API health..."
         if curl -s -f http://localhost:3000/health > /dev/null 2>&1; then
-          echo "✅ API is healthy"
+          echo "API is healthy"
           API_HEALTH="healthy"
         else
-          echo "❌ API health check failed"
+          echo "API health check failed"
           API_HEALTH="unhealthy"
         fi
         
         # Frontend Health Check
         echo "Checking frontend health..."
         if curl -s -f http://localhost/health > /dev/null 2>&1; then
-          echo "✅ Frontend is healthy"
+          echo "Frontend is healthy"
           FRONTEND_HEALTH="healthy"
         else
-          echo "❌ Frontend health check failed"
+          echo "Frontend health check failed"
           FRONTEND_HEALTH="unhealthy"
         fi
         
         # Database Health Check
         echo "Checking database connectivity..."
         if docker exec 25rp19824-turikumwenimana-db pg_isready -U expenseuser -h localhost > /dev/null 2>&1; then
-          echo "✅ Database is accessible"
+          echo "Database is accessible"
           DB_HEALTH="healthy"
         else
-          echo "❌ Database health check failed"
+          echo "Database health check failed"
           DB_HEALTH="unhealthy"
         fi
         
         # Overall deployment status
         if [ "$API_HEALTH" = "healthy" ] && [ "$FRONTEND_HEALTH" = "healthy" ] && [ "$DB_HEALTH" = "healthy" ]; then
           DEPLOYMENT_STATUS="success"
-          echo "🎉 All services are healthy - Deployment successful!"
+          echo "All services are healthy - Deployment successful!"
         else
           DEPLOYMENT_STATUS="degraded"
-          echo "⚠️ Some services are unhealthy - Deployment completed with issues"
+          echo "Some services are unhealthy - Deployment completed with issues"
         fi
         
-        # Export status for other jobs
-        echo "deployment_status=$DEPLOYMENT_STATUS" >> $GITHUB_OUTPUT
+        # Export status for next step
         echo "api_health=$API_HEALTH" >> $GITHUB_OUTPUT
         echo "frontend_health=$FRONTEND_HEALTH" >> $GITHUB_OUTPUT
         echo "db_health=$DB_HEALTH" >> $GITHUB_OUTPUT
-        echo "version=v0.1" >> $GITHUB_OUTPUT
+        echo "status=$DEPLOYMENT_STATUS" >> $GITHUB_OUTPUT
 
     - name: Generate deployment report
       id: deployment-status
       run: |
-        echo "📊 Generating deployment status report..."
+        echo "Generating deployment status report..."
         
         cat << EOF > deployment-status.json
         {
@@ -517,32 +516,33 @@ jobs:
           "services": {
             "api": {
               "endpoint": "http://localhost:3000",
-              "health": "${{ steps.deployment-status.outputs.api_health }}",
-              "status": "${{ steps.deployment-status.outputs.api_health == 'healthy' && 'operational' || 'degraded' }}"
+              "health": "${{ steps.health-check.outputs.api_health }}",
+              "status": "${{ steps.health-check.outputs.api_health == 'healthy' && 'operational' || 'degraded' }}"
             },
             "frontend": {
               "endpoint": "http://localhost",
-              "health": "${{ steps.deployment-status.outputs.frontend_health }}",
-              "status": "${{ steps.deployment-status.outputs.frontend_health == 'healthy' && 'operational' || 'degraded' }}"
+              "health": "${{ steps.health-check.outputs.frontend_health }}",
+              "status": "${{ steps.health-check.outputs.frontend_health == 'healthy' && 'operational' || 'degraded' }}"
             },
             "database": {
               "type": "PostgreSQL",
-              "health": "${{ steps.deployment-status.outputs.db_health }}",
-              "status": "${{ steps.deployment-status.outputs.db_health == 'healthy' && 'operational' || 'degraded' }}"
+              "health": "${{ steps.health-check.outputs.db_health }}",
+              "status": "${{ steps.health-check.outputs.db_health == 'healthy' && 'operational' || 'degraded' }}"
             }
           },
-          "overall_status": "${{ steps.deployment-status.outputs.status }}",
+          "overall_status": "${{ steps.health-check.outputs.status }}",
           "deployment_duration": "completed"
         }
         EOF
         
-        echo "status=${{ steps.deployment-status.outputs.status }}" >> $GITHUB_OUTPUT
-        echo "api_health=${{ steps.deployment-status.outputs.api_health }}" >> $GITHUB_OUTPUT
-        echo "frontend_health=${{ steps.deployment-status.outputs.frontend_health }}" >> $GITHUB_OUTPUT
+        # Pass values to job outputs
+        echo "status=${{ steps.health-check.outputs.status }}" >> $GITHUB_OUTPUT
+        echo "api_health=${{ steps.health-check.outputs.api_health }}" >> $GITHUB_OUTPUT
+        echo "frontend_health=${{ steps.health-check.outputs.frontend_health }}" >> $GITHUB_OUTPUT
         echo "version=v0.1" >> $GITHUB_OUTPUT
 
     - name: Upload deployment status artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: deployment-status-${{ github.sha }}
         path: deployment-status.json
@@ -550,12 +550,11 @@ jobs:
 
     - name: Deployment Complete
       run: |
-        echo "✅ Application deployment process completed!"
-        echo "📊 Deployment Status: ${{ steps.deployment-status.outputs.status }}"
-        echo "🌐 API Endpoint: http://localhost:3000 (${{ steps.deployment-status.outputs.api_health }})"
-        echo "🌐 Frontend Endpoint: http://localhost (${{ steps.deployment-status.outputs.frontend_health }})"
-        echo "🗄️ Database: ${{ steps.deployment-status.outputs.db_health }}"
-        echo "📋 Full status report saved as artifact"
+        echo "Application deployment process completed!"
+        echo "Deployment Status: ${{ steps.deployment-status.outputs.status }}"
+        echo "API Endpoint: http://localhost:3000 (${{ steps.deployment-status.outputs.api_health }})"
+        echo "Frontend Endpoint: http://localhost (${{ steps.deployment-status.outputs.frontend_health }})"
+        echo "Full status report saved as artifact"
 
     - name: Notify Slack on Deployment Success
       if: success()
@@ -585,19 +584,15 @@ jobs:
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Branch:*\n${{ github.ref }}"
-                  },
-                  {
-                    "type": "mrkdwn",
                     "text": "*Version:*\nv0.1"
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*API Health:*\n${{ needs.deploy-application.outputs.api_health == 'healthy' && '🟢 Healthy' || '🔴 Unhealthy' }}"
+                    "text": "*API Health:*\n${{ steps.deployment-status.outputs.api_health == 'healthy' && '🟢 Healthy' || '🔴 Unhealthy' }}"
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Frontend Health:*\n${{ needs.deploy-application.outputs.frontend_health == 'healthy' && '🟢 Healthy' || '🔴 Unhealthy' }}"
+                    "text": "*Frontend Health:*\n${{ steps.deployment-status.outputs.frontend_health == 'healthy' && '🟢 Healthy' || '🔴 Unhealthy' }}"
                   }
                 ]
               },
@@ -607,42 +602,6 @@ jobs:
                   "type": "mrkdwn",
                   "text": "*Service Endpoints:*\n🌐 API: http://localhost:3000\n🌐 Frontend: http://localhost\n🗄️ Database: PostgreSQL (Internal)"
                 }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*Deployment Features:*\n✅ Automated deployment with rollback\n✅ Health checks passed\n✅ HorizontalPodAutoscalers enabled\n✅ Production-ready configuration\n✅ Status monitoring active"
-                }
-              },
-              {
-                "type": "actions",
-                "elements": [
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View Deployment"
-                    },
-                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  },
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Check API Health"
-                    },
-                    "url": "http://localhost:3000/health"
-                  },
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Check Frontend"
-                    },
-                    "url": "http://localhost"
-                  }
-                ]
               }
             ]
           }
@@ -677,20 +636,9 @@ jobs:
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Branch:*\n${{ github.ref }}"
-                  },
-                  {
-                    "type": "mrkdwn",
                     "text": "*Action:*\nRollback initiated automatically"
                   }
                 ]
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*⚠️ Automatic Recovery:*\nAttempting automatic rollback to previous stable version..."
-                }
               },
               {
                 "type": "actions",
@@ -702,14 +650,6 @@ jobs:
                       "text": "View Failed Deployment"
                     },
                     "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  },
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View Repository"
-                    },
-                    "url": "${{ github.server_url }}/${{ github.repository }}"
                   }
                 ]
               }
@@ -721,52 +661,12 @@ jobs:
     - name: Automatic Rollback on Deployment Failure
       if: failure()
       run: |
-        echo "🔄 Initiating automatic rollback..."
+        echo "Initiating automatic rollback..."
         ./scripts/deploy.sh kubernetes rollback || echo "Rollback completed with warnings"
 
   # ===========================================
-  # DEPLOYMENT STATUS CHECK - Can be called by other workflows
+  # STAGE 6: WORKFLOW COMPLETE - Final summary
   # ===========================================
-  deployment-status-check:
-    runs-on: ubuntu-latest
-    name: "Check Deployment Status"
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'
-    outputs:
-      api_status: ${{ steps.status-check.outputs.api_status }}
-      frontend_status: ${{ steps.status-check.outputs.frontend_status }}
-      overall_status: ${{ steps.status-check.outputs.overall_status }}
-    steps:
-    - name: Check API Status
-      id: status-check
-      run: |
-        echo "🔍 Checking deployment status..."
-        
-        # API Status Check
-        if curl -s -f --max-time 10 http://localhost:3000/health > /dev/null 2>&1; then
-          echo "✅ API is responding"
-          echo "api_status=healthy" >> $GITHUB_OUTPUT
-        else
-          echo "❌ API is not responding"
-          echo "api_status=unhealthy" >> $GITHUB_OUTPUT
-        fi
-        
-        # Frontend Status Check
-        if curl -s -f --max-time 10 http://localhost/health > /dev/null 2>&1; then
-          echo "✅ Frontend is responding"
-          echo "frontend_status=healthy" >> $GITHUB_OUTPUT
-        else
-          echo "❌ Frontend is not responding"
-          echo "frontend_status=unhealthy" >> $GITHUB_OUTPUT
-        fi
-        
-        # Overall Status
-        if [ "${{ steps.status-check.outputs.api_status }}" = "healthy" ] && [ "${{ steps.status-check.outputs.frontend_status }}" = "healthy" ]; then
-          echo "✅ All services operational"
-          echo "overall_status=operational" >> $GITHUB_OUTPUT
-        else
-          echo "⚠️ Some services degraded"
-          echo "overall_status=degraded" >> $GITHUB_OUTPUT
-        fi
   workflow-complete:
     runs-on: ubuntu-latest
     name: "Stage 6: Workflow Complete"
@@ -786,14 +686,10 @@ jobs:
           echo "Stage 4: Build & Push to Docker Hub - ${{ needs.build-and-push.result }}"
           echo "Stage 5: Deploy Application - ${{ needs.deploy-application.result }}"
           echo ""
-          echo "DEPLOYMENT STATUS DETAILS:"
-          echo "├── API Health: ${{ needs.deploy-application.outputs.api_health }}"
-          echo "├── Frontend Health: ${{ needs.deploy-application.outputs.frontend_health }}"
-          echo "└── Overall Status: ${{ needs.deploy-application.outputs.deployment_status }}"
-          echo ""
-          echo "SERVICE ENDPOINTS:"
-          echo "├── API: http://localhost:3000"
-          echo "└── Frontend: http://localhost"
+          echo "DEPLOYMENT STATUS:"
+          echo "API Health: ${{ needs.deploy-application.outputs.api_health }}"
+          echo "Frontend Health: ${{ needs.deploy-application.outputs.frontend_health }}"
+          echo "Overall Status: ${{ needs.deploy-application.outputs.deployment_status }}"
         else
           echo "Stage 4: Build & Push - skipped (not main branch)"
           echo "Stage 5: Deploy Application - skipped (not main branch)"
@@ -802,7 +698,6 @@ jobs:
         echo "Branch: ${{ github.ref }}"
         echo "Commit: ${{ github.sha }}"
         echo "Author: ${{ github.actor }}"
-        echo "Timestamp: $(date)"
         echo "================================================"
 
     - name: Send Slack Notification - Pipeline Complete (Success)
@@ -837,10 +732,6 @@ jobs:
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Commit:*\n${{ github.sha }}"
-                  },
-                  {
-                    "type": "mrkdwn",
                     "text": "*Author:*\n${{ github.actor }}"
                   },
                   {
@@ -853,14 +744,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Pipeline Stages:*\n✅ Stage 1: Code Quality & Security (Parallel)\n✅ Stage 2: Test Code\n✅ Stage 3: Build & Integration Test\n✅ Stage 4: Build & Push to Docker Hub\n✅ Stage 5: Deploy Application\n✅ Stage 6: Workflow Complete"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*🚀 Application Status:*\n${{ needs.deploy-application.result == 'success' && '✅ Successfully deployed to production\n🌐 API: http://localhost:3000 (${{ needs.deploy-application.outputs.api_health }})\n🌐 Frontend: http://localhost (${{ needs.deploy-application.outputs.frontend_health }})\n📊 Deployment Status: ${{ needs.deploy-application.outputs.deployment_status }}' || '⏭️ Deployment skipped (not main branch)' }}"
+                  "text": "*Pipeline Stages:*\n✅ Stage 1: Code Quality & Security\n✅ Stage 2: Test Code\n✅ Stage 3: Build & Integration Test\n✅ Stage 4: Build & Push to Docker Hub\n✅ Stage 5: Deploy Application\n✅ Stage 6: Workflow Complete"
                 }
               },
               {
@@ -878,105 +762,4 @@ jobs:
                     "type": "button",
                     "text": {
                       "type": "plain_text",
-                      "text": "View Commit"
-                    },
-                    "url": "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
-                  },
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Check Application"
-                    },
-                    "url": "http://localhost:3000/health"
-                  }
-                ]
-              }
-            ]
-          }
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-    - name: Send Slack Alert - Pipeline Failed
-      if: needs.code-quality.result == 'failure' || needs.security-scan.result == 'failure' || needs.test-code.result == 'failure' || needs.build-and-test.result == 'failure' || needs.build-and-push.result == 'failure' || needs.deploy-application.result == 'failure'
-      uses: slackapi/slack-github-action@v1.24.0
-      with:
-        payload: |
-          {
-            "text": "❌ ALERT: CI/CD Pipeline Failed",
-            "blocks": [
-              {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "❌ ALERT: Pipeline Failed"
-                }
-              },
-              {
-                "type": "section",
-                "fields": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Project:*\n25RP19824-Turikumwenimana"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Status:*\n❌ Pipeline Failed"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Branch:*\n${{ github.ref }}"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Commit:*\n${{ github.sha }}"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Author:*\n${{ github.actor }}"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Action:*\nImmediate Review Required"
-                  }
-                ]
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*Failed Stages:*\n${{ needs.code-quality.result == 'failure' && '❌ Stage 1a: Code Quality\n' || '' }}${{ needs.security-scan.result == 'failure' && '❌ Stage 1b: Security Scan\n' || '' }}${{ needs.test-code.result == 'failure' && '❌ Stage 2: Test Code\n' || '' }}${{ needs.build-and-test.result == 'failure' && '❌ Stage 3: Build & Integration Test\n' || '' }}${{ needs.build-and-push.result == 'failure' && '❌ Stage 4: Build & Push to Docker Hub\n' || '' }}${{ needs.deploy-application.result == 'failure' && '❌ Stage 5: Deploy Application\n' || '' }}"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*⚠️ Alert:*\nOne or more pipeline stages failed. Review logs and take corrective action."
-                }
-              },
-              {
-                "type": "actions",
-                "elements": [
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View Failed Workflow"
-                    },
-                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  },
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View Repository"
-                    },
-                    "url": "${{ github.server_url }}/${{ github.repository }}"
-                  }
-                ]
-              }
-            ]
-          }
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+                      "text": "View
