@@ -447,10 +447,10 @@ jobs:
     - name: Make deployment scripts executable
       run: chmod +x scripts/deploy.sh scripts/deploy-k8s.sh scripts/rollback-k8s.sh
 
-    - name: Deploy to Kubernetes
+    - name: Deploy Application
       run: |
         echo "Starting automated deployment..."
-        ./scripts/deploy.sh kubernetes deploy
+        ./scripts/deploy.sh docker deploy
 
     - name: Run post-deployment health checks
       id: health-check
@@ -662,7 +662,7 @@ jobs:
       if: failure()
       run: |
         echo "Initiating automatic rollback..."
-        ./scripts/deploy.sh kubernetes rollback || echo "Rollback completed with warnings"
+        ./scripts/deploy.sh docker rollback || echo "Rollback completed with warnings"
 
   # ===========================================
   # STAGE 6: WORKFLOW COMPLETE - Final summary
