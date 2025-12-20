@@ -37,24 +37,25 @@ const httpRequestTotal = new promClient.Counter({
   registers: [register]
 });
 
-const dbQueryDuration = new promClient.Histogram({
-  name: 'db_query_duration_ms',
-  help: 'Duration of database queries in ms',
-  labelNames: ['query_type'],
-  registers: [register]
-});
+// Prometheus metrics for future use
+// const dbQueryDuration = new promClient.Histogram({
+//   name: 'db_query_duration_ms',
+//   help: 'Duration of database queries in ms',
+//   labelNames: ['query_type'],
+//   registers: [register]
+// });
 
-const activeUsers = new promClient.Gauge({
-  name: 'active_users',
-  help: 'Number of active users',
-  registers: [register]
-});
+// const activeUsers = new promClient.Gauge({
+//   name: 'active_users',
+//   help: 'Number of active users',
+//   registers: [register]
+// });
 
-const totalExpenses = new promClient.Gauge({
-  name: 'total_expenses',
-  help: 'Total number of expenses',
-  registers: [register]
-});
+// const totalExpenses = new promClient.Gauge({
+//   name: 'total_expenses',
+//   help: 'Total number of expenses',
+//   registers: [register]
+// });
 
 require('dotenv').config();
 
@@ -544,7 +545,7 @@ app.get('/api/v1/admin/statistics', authenticateToken, authenticateAdmin, async 
 });
 
 // Error handling
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   logger.error(`Unhandled error: ${err.message}`);
   res.status(500).json({ error: 'Internal server error' });
 });
