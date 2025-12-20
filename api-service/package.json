@@ -1,0 +1,30 @@
+{
+  "name": "25rp19824-turikumwenimana-api",
+  "version": "1.0.0",
+  "description": "Expense Tracker API Microservice",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest --coverage --passWithNoTests",
+    "lint": "eslint src/ --max-warnings 0 || true"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "pg": "^8.9.0",
+    "uuid": "^9.0.0",
+    "winston": "^3.8.2"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "nodemon": "^2.0.20",
+    "eslint": "^8.40.0",
+    "supertest": "^6.3.3"
+  }
+}

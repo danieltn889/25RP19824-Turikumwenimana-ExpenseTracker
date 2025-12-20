@@ -1,0 +1,49 @@
+DECLARATION OF ORIGINALITY
+
+PROJECT: 25RP19824-Turikumwenimana - Expense Tracker DevOps Implementation
+STUDENT ID: 25RP19824
+STUDENT NAME: Turikumwenimana
+DATE: December 2025
+
+I hereby declare that:
+
+1. This work is entirely my own original work.
+
+2. I have not copied code, configuration files, or documentation from any 
+   other source without proper attribution.
+
+3. All external resources, libraries, and frameworks are properly acknowledged
+   in the documentation.
+
+4. I have not plagiarized or used any work created by other students.
+
+5. This implementation demonstrates my understanding of DevOps practices 
+   and technologies.
+
+6. All deliverables (code, configurations, scripts, documentation) are 
+   original creations by me.
+
+7. I understand that any violation of this declaration may result in 
+   disciplinary action or grade forfeiture.
+
+SIGNATURE: ___________________________
+
+DATE: ___________________________
+
+WITNESS (Optional): ___________________________
+
+
+ACKNOWLEDGMENT OF SOURCES:
+
+The following open-source tools and frameworks were used:
+- Docker (Apache 2.0 License)
+- Kubernetes (Apache 2.0 License)
+- Node.js (MIT License)
+- Express.js (MIT License)
+- PostgreSQL (PostgreSQL License)
+- Terraform (MPL 2.0 License)
+- Ansible (GPL v3 License)
+- GitHub Actions (Proprietary)
+- Prometheus (Apache 2.0 License)
+
+All usage complies with their respective licenses.

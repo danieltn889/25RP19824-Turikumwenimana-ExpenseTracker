@@ -1,0 +1,13 @@
+{
+  "name": "25rp19824-turikumwenimana-frontend",
+  "version": "1.0.0",
+  "description": "Expense Tracker Frontend Service",
+  "private": true,
+  "scripts": {
+    "start": "echo 'Static frontend - no build needed'",
+    "build": "echo 'Static frontend - no build needed'",
+    "test": "echo 'Frontend tests' && exit 0"
+  },
+  "devDependencies": {}
+}
+

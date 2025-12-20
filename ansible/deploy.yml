@@ -1,0 +1,61 @@
+---
+- name: Deploy 25rp19824-turikumwenimana Expense Tracker
+  hosts: all
+  become: false
+  vars:
+    project_name: 25rp19824-turikumwenimana
+    app_path: /opt/{{ project_name }}
+    docker_compose_version: "2.15.1"
+
+  tasks:
+    - name: Create application directory
+      file:
+        path: "{{ app_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy docker-compose file
+      copy:
+        src: ../docker-compose.yml
+        dest: "{{ app_path }}/docker-compose.yml"
+        mode: '0644'
+
+    - name: Copy .env file
+      copy:
+        src: ../env
+        dest: "{{ app_path }}/.env"
+        mode: '0644'
+
+    - name: Copy init-db.sql
+      copy:
+        src: ../init-db.sql
+        dest: "{{ app_path }}/init-db.sql"
+        mode: '0644'
+
+    - name: Pull latest images
+      shell: docker pull postgres:15-alpine && docker pull danieltn889/25rp19824-turikumwenimana-api:latest && docker pull danieltn889/25rp19824-turikumwenimana-frontend:latest
+      ignore_errors: yes
+
+    - name: Start services with docker-compose
+      shell: |
+        cd {{ app_path }}
+        docker-compose up -d
+      register: compose_result
+
+    - name: Display compose result
+      debug:
+        msg: "{{ compose_result.stdout }}"
+
+    - name: Wait for API to be ready
+      uri:
+        url: http://localhost:3000/health
+        method: GET
+        status_code: 200
+      register: api_health
+      until: api_health.status == 200
+      retries: 30
+      delay: 10
+
+    - name: Display API status
+      debug:
+        msg: "API is healthy: {{ api_health.json }}"

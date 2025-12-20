@@ -1,0 +1,21 @@
+groups:
+  - name: 25rp19824-turikumwenimana-alerts
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up{job="api-service"} == 0
+        for: 2m
+        annotations:
+          summary: "25rp19824-turikumwenimana API service is down"
+          
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes > 268435456
+        for: 5m
+        annotations:
+          summary: "High memory usage detected"
+          
+      - alert: DatabaseDown
+        expr: up{job="database"} == 0
+        for: 1m
+        annotations:
+          summary: "Database is unreachable"
