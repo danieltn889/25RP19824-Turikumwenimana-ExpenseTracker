@@ -8,13 +8,13 @@ global:
 scrape_configs:
   - job_name: 'api-service'
     static_configs:
-      - targets: ['localhost:3000']
+      - targets: ['25rp19824-turikumwenimana-api:3000']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
   - job_name: 'database'
     static_configs:
-      - targets: ['localhost:5432']
+      - targets: ['25rp19824-turikumwenimana-db:5432']
     scrape_interval: 60s
 
   - job_name: 'prometheus'

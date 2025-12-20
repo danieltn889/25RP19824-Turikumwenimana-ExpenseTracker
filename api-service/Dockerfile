@@ -1,13 +1,23 @@
 FROM node:18-alpine
 
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
 WORKDIR /app
 
 RUN mkdir -p logs
 
-COPY package*.json ./
-RUN npm install --legacy-peer-deps 2>&1 || npm install || true
+# Change ownership before copying files
+RUN chown -R nodejs:nodejs /app
 
-COPY src ./src
+COPY --chown=nodejs:nodejs package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+COPY --chown=nodejs:nodejs src ./src
+
+# Switch to non-root user
+USER nodejs
 
 EXPOSE 3000
 

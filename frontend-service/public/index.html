@@ -577,7 +577,7 @@
       if (!response.ok) throw new Error('Failed to load expenses');
 
       const data = await response.json();
-      const expenses = data.expenses || [];
+      const expenses = Array.isArray(data) ? data : (data.expenses || []);
 
       let html = '';
       if (expenses.length === 0) {

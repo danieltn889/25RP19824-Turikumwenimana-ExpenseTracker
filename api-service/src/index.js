@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('./db');
 const logger = require('./logger');
@@ -37,6 +38,19 @@ const httpRequestTotal = new promClient.Counter({
   registers: [register]
 });
 
+const dbConnectionPoolSize = new promClient.Gauge({
+  name: 'db_connection_pool_size',
+  help: 'Number of active database connections in pool',
+  registers: [register]
+});
+
+const dbQueryErrors = new promClient.Counter({
+  name: 'db_query_errors_total',
+  help: 'Total number of database query errors',
+  labelNames: ['query_type'],
+  registers: [register]
+});
+
 // Prometheus metrics for future use
 // const dbQueryDuration = new promClient.Histogram({
 //   name: 'db_query_duration_ms',
@@ -65,14 +79,17 @@ const port = process.env.API_PORT || 3000;
 // Middleware
 app.use(helmet());
 app.use(cors());
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests, please try again later'
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: 'Too many requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false
 });
 app.use(limiter);
 
@@ -99,9 +116,15 @@ app.get('/health', (req, res) => {
 });
 
 // ============ PROMETHEUS METRICS ============
-app.get('/metrics', (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(register.metrics());
+app.get('/metrics', async (req, res) => {
+  try {
+    const metrics = await register.metrics();
+    res.set('Content-Type', register.contentType);
+    res.end(metrics);
+  } catch (err) {
+    logger.error(`Metrics error: ${err.message}`);
+    res.status(500).json({ error: 'Failed to generate metrics', details: err.message });
+  }
 });
 
 // ============ AUTHENTICATION ENDPOINTS ============
