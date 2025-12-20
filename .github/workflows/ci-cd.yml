@@ -47,9 +47,8 @@ jobs:
     - name: Notify Slack on Success (Stage 1)
       if: success()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "✅ Stage 1: Lint & Test PASSED",
@@ -67,9 +66,8 @@ jobs:
     - name: Notify Slack on Failure (Stage 1)
       if: failure()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "❌ Stage 1: Lint & Test FAILED",
@@ -124,9 +122,8 @@ jobs:
     - name: Notify Slack on Success (Stage 2)
       if: success()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "✅ Stage 2: Build & Integration Test PASSED",
@@ -144,9 +141,8 @@ jobs:
     - name: Notify Slack on Failure (Stage 2)
       if: failure()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "❌ Stage 2: Build & Integration Test FAILED",
@@ -234,9 +230,8 @@ jobs:
     - name: Notify Slack on Success (Stage 3)
       if: success()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "✅ Stage 3: Build & Push to Docker Hub PASSED",
@@ -254,9 +249,8 @@ jobs:
     - name: Notify Slack on Failure (Stage 3)
       if: failure()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "❌ Stage 3: Build & Push to Docker Hub FAILED",
@@ -310,20 +304,19 @@ jobs:
       continue-on-error: true
 
     - name: Upload Trivy results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: 'trivy-results.sarif'
       continue-on-error: true
 
     - name: "✅ Security Scan Complete"
-      run: echo "Security scanning completed"
+      run: "Security scanning completed"
 
     - name: Notify Slack on Success (Security Scan)
       if: success()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "✅ Security Scan PASSED",
@@ -341,9 +334,8 @@ jobs:
     - name: Notify Slack on Failure (Security Scan)
       if: failure()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "⚠️ Security Scan FAILED",
@@ -394,9 +386,8 @@ jobs:
     - name: Send Slack Notification - Pipeline Complete (Success)
       if: success()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "✅ CI/CD Pipeline Completed Successfully",
@@ -471,9 +462,8 @@ jobs:
     - name: Send Slack Alert - Pipeline Failed
       if: failure()
       uses: slackapi/slack-github-action@v1.24.0
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
             "text": "❌ ALERT: CI/CD Pipeline Failed",
