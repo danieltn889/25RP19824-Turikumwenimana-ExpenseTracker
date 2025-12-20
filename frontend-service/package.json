@@ -4,10 +4,9 @@
   "description": "Expense Tracker Frontend Service",
   "private": true,
   "scripts": {
-    "start": "echo 'Static frontend - no build needed'",
-    "build": "echo 'Static frontend - no build needed'",
+    "start": "node init && echo 'Static frontend - no build needed'",
+    "build": "node init && echo 'Static frontend - no build needed'",
     "test": "echo 'Frontend tests' && exit 0"
   },
   "devDependencies": {}
 }
-
