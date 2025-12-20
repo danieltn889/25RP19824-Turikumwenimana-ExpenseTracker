@@ -16,4 +16,9 @@ if (process.env.NODE_ENV !== 'production') {
   }));
 }
 
+// Always add console transport for debugging
+logger.add(new winston.transports.Console({
+  format: winston.format.simple()
+}));
+
 module.exports = logger;

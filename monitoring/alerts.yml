@@ -2,20 +2,72 @@ groups:
   - name: 25rp19824-turikumwenimana-alerts
     interval: 30s
     rules:
+      # Critical Alerts
       - alert: ServiceDown
         expr: up{job="api-service"} == 0
         for: 2m
+        labels:
+          severity: critical
+          student_id: "25RP19824"
+          project: turikumwenimana-expense-tracker
         annotations:
-          summary: "25rp19824-turikumwenimana API service is down"
-          
-      - alert: HighMemoryUsage
-        expr: container_memory_usage_bytes > 268435456
-        for: 5m
-        annotations:
-          summary: "High memory usage detected"
+          summary: "25RP19824-Turikumwenimana API service is down"
+          description: "API service has been down for more than 2 minutes. Immediate action required."
+          runbook: "Check service logs: docker compose logs api"
           
       - alert: DatabaseDown
         expr: up{job="database"} == 0
         for: 1m
+        labels:
+          severity: critical
+          student_id: "25RP19824"
         annotations:
-          summary: "Database is unreachable"
+          summary: "PostgreSQL database is unreachable"
+          description: "Database connection failed for more than 1 minute. Data persistence at risk."
+          runbook: "Check database: docker compose logs db && docker compose ps db"
+      
+      # Warning Alerts
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes > 268435456
+        for: 5m
+        labels:
+          severity: warning
+          student_id: "25RP19824"
+        annotations:
+          summary: "High memory usage detected (>256MB)"
+          description: "Container memory usage exceeds 256MB for 5 minutes."
+          runbook: "Check container stats: docker stats"
+          
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_ms_bucket[5m])) > 1000
+        for: 3m
+        labels:
+          severity: warning
+          student_id: "25RP19824"
+        annotations:
+          summary: "API response time is high (p95 > 1s)"
+          description: "95th percentile response time exceeds 1 second for 3 minutes."
+          runbook: "Check API performance and database queries"
+      
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status_code=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          student_id: "25RP19824"
+        annotations:
+          summary: "High error rate detected (>5%)"
+          description: "Server error rate exceeds 5% for 2 minutes."
+          runbook: "Check application logs: docker compose logs api --tail 100"
+          
+      - alert: DatabaseConnectionPoolExhausted
+        expr: absent(up{job="database"}) or up{job="database"} < 1
+        for: 30s
+        labels:
+          severity: warning
+          student_id: "25RP19824"
+        annotations:
+          summary: "Database connection issues detected"
+          description: "Unable to maintain stable database connections."
+          runbook: "Check database connections and restart if needed"
+

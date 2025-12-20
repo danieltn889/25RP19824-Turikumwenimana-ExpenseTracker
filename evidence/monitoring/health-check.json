@@ -1,0 +1,14 @@
+{
+  "status": "healthy",
+  "service": "25rp19824-turikumwenimana-api",
+  "timestamp": "2025-12-20T21:13:04.505Z",
+  "uptime": 91.256072997,
+  "checks": {
+    "database": "healthy",
+    "memory": "healthy"
+  },
+  "memory": {
+    "heapUsedMB": 16,
+    "heapTotalMB": 30
+  }
+}

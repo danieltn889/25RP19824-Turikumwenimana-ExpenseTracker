@@ -21,18 +21,18 @@ data:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: 25rp19824-turikumwenimana-db
+  name: turikumwenimana-db
   namespace: 25rp19824-turikumwenimana
 spec:
-  serviceName: 25rp19824-turikumwenimana-db
+  serviceName: turikumwenimana-db
   replicas: 1
   selector:
     matchLabels:
-      app: 25rp19824-turikumwenimana-db
+      app: turikumwenimana-db
   template:
     metadata:
       labels:
-        app: 25rp19824-turikumwenimana-db
+        app: turikumwenimana-db
     spec:
       containers:
       - name: postgres
@@ -97,14 +97,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: 25rp19824-turikumwenimana-db
+  name: turikumwenimana-db
   namespace: 25rp19824-turikumwenimana
   labels:
-    app: 25rp19824-turikumwenimana-db
+    app: turikumwenimana-db
 spec:
   clusterIP: None
   selector:
-    app: 25rp19824-turikumwenimana-db
+    app: turikumwenimana-db
   ports:
   - port: 5432
     targetPort: 5432

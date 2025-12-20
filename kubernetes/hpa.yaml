@@ -1,15 +1,15 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: 25rp19824-turikumwenimana-api-hpa
+  name: turikumwenimana-api-hpa
   namespace: 25rp19824-turikumwenimana
   labels:
-    app: 25rp19824-turikumwenimana-api
+    app: turikumwenimana-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: 25rp19824-turikumwenimana-api
+    name: turikumwenimana-api
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -46,15 +46,15 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: 25rp19824-turikumwenimana-frontend-hpa
+  name: turikumwenimana-frontend-hpa
   namespace: 25rp19824-turikumwenimana
   labels:
-    app: 25rp19824-turikumwenimana-frontend
+    app: turikumwenimana-frontend
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: 25rp19824-turikumwenimana-frontend
+    name: turikumwenimana-frontend
   minReplicas: 2
   maxReplicas: 8
   metrics:

@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: danieltn889/25rp19824-turikumwenimana-api:v0.1
+    build: ./api-service
     container_name: 25rp19824-turikumwenimana-api
     environment:
       DB_HOST: db

@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const { v4: uuidv4 } = require('uuid');
+// const { query } = require('./db');
+// const logger = require('./logger');
 const { query } = require('./db');
 const logger = require('./logger');
 const {
@@ -18,58 +20,41 @@ const {
 
 // Prometheus metrics
 const promClient = require('prom-client');
-const register = new promClient.Registry();
+
+// Use the global registry
+const register = promClient.register;
 
 // Default metrics
-promClient.collectDefaultMetrics({ register });
+promClient.collectDefaultMetrics();
 
 // Custom metrics
 const httpRequestDuration = new promClient.Histogram({
   name: 'http_request_duration_ms',
   help: 'Duration of HTTP requests in ms',
-  labelNames: ['method', 'route', 'status_code'],
-  registers: [register]
+  labelNames: ['method', 'route', 'status_code']
 });
 
 const httpRequestTotal = new promClient.Counter({
   name: 'http_requests_total',
   help: 'Total number of HTTP requests',
-  labelNames: ['method', 'route', 'status_code'],
-  registers: [register]
+  labelNames: ['method', 'route', 'status_code']
 });
 
-// Prometheus metrics for future use
-// const dbConnectionPoolSize = new promClient.Gauge({
-//   name: 'db_connection_pool_size',
-//   help: 'Number of active database connections in pool',
-//   registers: [register]
-// });
+const activeUsers = new promClient.Gauge({
+  name: 'active_users_total',
+  help: 'Number of active users in the system'
+});
 
-// const dbQueryErrors = new promClient.Counter({
-//   name: 'db_query_errors_total',
-//   help: 'Total number of database query errors',
-//   labelNames: ['query_type'],
-//   registers: [register]
-// });
+const totalExpenses = new promClient.Gauge({
+  name: 'total_expenses_count',
+  help: 'Total number of expenses in the system'
+});
 
-// const dbQueryDuration = new promClient.Histogram({
-//   name: 'db_query_duration_ms',
-//   help: 'Duration of database queries in ms',
-//   labelNames: ['query_type'],
-//   registers: [register]
-// });
-
-// const activeUsers = new promClient.Gauge({
-//   name: 'active_users',
-//   help: 'Number of active users',
-//   registers: [register]
-// });
-
-// const totalExpenses = new promClient.Gauge({
-//   name: 'total_expenses',
-//   help: 'Total number of expenses',
-//   registers: [register]
-// });
+const dbQueryDuration = new promClient.Histogram({
+  name: 'db_query_duration_seconds',
+  help: 'Duration of database queries in seconds',
+  labelNames: ['query_type']
+});
 
 require('dotenv').config();
 
@@ -84,128 +69,128 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  message: 'Too many requests, please try again later',
-  standardHeaders: true,
-  legacyHeaders: false
-});
-app.use(limiter);
-
 // Prometheus metrics middleware
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    httpRequestDuration.labels(req.method, req.route?.path || req.path, res.statusCode).observe(duration);
-    httpRequestTotal.labels(req.method, req.route?.path || req.path, res.statusCode).inc();
+    const route = req.route?.path || req.path || 'unknown';
+    httpRequestDuration.labels(req.method, route, res.statusCode.toString()).observe(duration);
+    httpRequestTotal.labels(req.method, route, res.statusCode.toString()).inc();
   });
   next();
 });
 
+// Rate limiting
+// const limiter = rateLimit({
+//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+//   message: 'Too many requests, please try again later',
+//   standardHeaders: true,
+//   legacyHeaders: false
+// });
+// app.use(limiter);
+
+// Test route
+app.get('/ping', (req, res) => {
+  res.json({ message: 'pong' });
+});
+
 // ============ HEALTH CHECK ============
-app.get('/health', (req, res) => {
-  logger.info('Health check requested');
-  res.json({
+app.get('/health', async (req, res) => {
+  console.log('Health check requested');
+  const health = {
     status: 'healthy',
     service: '25rp19824-turikumwenimana-api',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+    uptime: process.uptime(),
+    checks: {
+      database: 'unknown',
+      memory: 'unknown'
+    }
+  };
+
+  // Database connectivity check
+  try {
+    const result = await query('SELECT 1 as health');
+    health.checks.database = result.rows.length > 0 ? 'healthy' : 'unhealthy';
+  } catch (err) {
+    health.checks.database = 'unhealthy';
+    health.status = 'degraded';
+    logger.error(`Database health check failed: ${err.message}`);
+  }
+
+  // Memory check
+  const memUsage = process.memoryUsage();
+  const memUsageMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+  health.checks.memory = memUsageMB < 500 ? 'healthy' : 'warning';
+  health.memory = { heapUsedMB: memUsageMB, heapTotalMB: Math.round(memUsage.heapTotal / 1024 / 1024) };
+
+  const statusCode = health.status === 'healthy' ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 // ============ PROMETHEUS METRICS ============
 app.get('/metrics', async (req, res) => {
+  console.log('Metrics endpoint called at', new Date().toISOString());
+  
+  // Update gauge metrics
   try {
-    const metrics = await register.metrics();
-    res.set('Content-Type', register.contentType);
-    res.end(metrics);
+    const usersResult = await query('SELECT COUNT(*) as count FROM users');
+    activeUsers.set(parseInt(usersResult.rows[0].count));
+    
+    const expensesResult = await query('SELECT COUNT(*) as count FROM expenses');
+    totalExpenses.set(parseInt(expensesResult.rows[0].count));
   } catch (err) {
-    logger.error(`Metrics error: ${err.message}`);
-    res.status(500).json({ error: 'Failed to generate metrics', details: err.message });
+    logger.error(`Failed to update metrics: ${err.message}`);
   }
+  
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
 });
 
 // ============ AUTHENTICATION ENDPOINTS ============
-
-// Register
-app.post('/api/v1/auth/register', async (req, res) => {
-  try {
-    const { username, email, password, fullName } = req.body;
-
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    const result = await registerUser(username, email, password, fullName);
-
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-
-    logger.info(`User registered: ${username}`);
-    res.status(201).json(result);
-  } catch (err) {
-    logger.error(`Registration error: ${err.message}`);
-    res.status(500).json({ error: 'Registration failed' });
-  }
-});
-
 // Login
 app.post('/api/v1/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' });
-    }
-
     const result = await loginUser(username, password);
-
-    if (!result.success) {
-      return res.status(401).json({ error: result.error });
-    }
-
-    logger.info(`User logged in: ${username}`);
     res.json(result);
   } catch (err) {
     logger.error(`Login error: ${err.message}`);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(401).json({ error: err.message });
   }
 });
 
-// ============ USER PROFILE ENDPOINTS ============
+// Register
+app.post('/api/v1/auth/register', async (req, res) => {
+  try {
+    const { username, email, fullName, password } = req.body;
+    const result = await registerUser(username, email, fullName, password);
+    res.json(result);
+  } catch (err) {
+    logger.error(`Register error: ${err.message}`);
+    res.status(400).json({ error: err.message });
+  }
+});
 
-// Get current user profile
-app.get('/api/v1/users/profile', authenticateToken, async (req, res) => {
+// Get user profile
+app.get('/api/v1/auth/profile', authenticateToken, async (req, res) => {
   try {
     const result = await getUserProfile(req.user.id);
-
-    if (!result.success) {
-      return res.status(404).json({ error: result.error });
-    }
-
-    res.json(result.user);
+    res.json(result);
   } catch (err) {
     logger.error(`Get profile error: ${err.message}`);
-    res.status(500).json({ error: 'Failed to fetch profile' });
+    res.status(500).json({ error: 'Failed to get profile' });
   }
 });
 
 // Update user profile
-app.put('/api/v1/users/profile', authenticateToken, async (req, res) => {
+app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const { full_name, profile_image } = req.body;
-    const result = await updateUserProfile(req.user.id, { full_name, profile_image });
-
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-
-    logger.info(`Profile updated for user: ${req.user.username}`);
-    res.json({ message: 'Profile updated successfully', user: result.user });
+    const { fullName, email } = req.body;
+    const result = await updateUserProfile(req.user.id, fullName, email);
+    res.json(result);
   } catch (err) {
     logger.error(`Update profile error: ${err.message}`);
     res.status(500).json({ error: 'Failed to update profile' });
@@ -213,31 +198,18 @@ app.put('/api/v1/users/profile', authenticateToken, async (req, res) => {
 });
 
 // Change password
-app.post('/api/v1/users/change-password', authenticateToken, async (req, res) => {
+app.put('/api/v1/auth/password', authenticateToken, async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
-
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({ error: 'Both passwords required' });
-    }
-
-    const result = await changePassword(req.user.id, oldPassword, newPassword);
-
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-
-    logger.info(`Password changed for user: ${req.user.username}`);
-    res.json(result);
+    const { currentPassword, newPassword } = req.body;
+    await changePassword(req.user.id, currentPassword, newPassword);
+    res.json({ message: 'Password changed successfully' });
   } catch (err) {
     logger.error(`Change password error: ${err.message}`);
-    res.status(500).json({ error: 'Failed to change password' });
+    res.status(400).json({ error: err.message });
   }
 });
 
 // ============ EXPENSE ENDPOINTS (USER) ============
-
-// Create expense (authenticated users)
 app.post('/api/v1/expenses', authenticateToken, async (req, res) => {
   try {
     const { description, amount, category } = req.body;
@@ -250,13 +222,14 @@ app.post('/api/v1/expenses', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
+    const userId = req.user.id;
     const id = uuidv4();
     const result = await query(
       'INSERT INTO expenses (id, user_id, description, amount, category) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [id, req.user.id, description, amount, category]
+      [id, userId, description, amount, category]
     );
 
-    logger.info(`Expense created: ${id} by user: ${req.user.username}`);
+    logger.info(`Expense created: ${id} for user: ${req.user.username}`);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     logger.error(`Create expense error: ${err.message}`);
@@ -267,9 +240,10 @@ app.post('/api/v1/expenses', authenticateToken, async (req, res) => {
 // Get user's expenses with filters
 app.get('/api/v1/expenses', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { startDate, endDate, category } = req.query;
     let whereClause = 'WHERE e.user_id = $1';
-    let params = [req.user.id];
+    let params = [userId];
     let paramCount = 1;
 
     if (startDate) {
@@ -291,8 +265,8 @@ app.get('/api/v1/expenses', authenticateToken, async (req, res) => {
     }
 
     const result = await query(
-      `SELECT e.* FROM expenses e ${whereClause} ORDER BY e.created_at DESC`,
-      params
+      `SELECT * FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`,
+      [userId]
     );
 
     logger.info(`Retrieved ${result.rows.length} expenses for user: ${req.user.username}`);
@@ -306,9 +280,10 @@ app.get('/api/v1/expenses', authenticateToken, async (req, res) => {
 // Get single expense
 app.get('/api/v1/expenses/:id', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const result = await query(
       'SELECT * FROM expenses WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.user.id]
+      [req.params.id, userId]
     );
 
     if (result.rows.length === 0) {
@@ -325,6 +300,7 @@ app.get('/api/v1/expenses/:id', authenticateToken, async (req, res) => {
 // Update expense
 app.put('/api/v1/expenses/:id', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { description, amount, category } = req.body;
 
     const checkResult = await query(
@@ -336,7 +312,7 @@ app.put('/api/v1/expenses/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Expense not found' });
     }
 
-    if (checkResult.rows[0].user_id !== req.user.id) {
+    if (checkResult.rows[0].user_id !== userId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -345,7 +321,7 @@ app.put('/api/v1/expenses/:id', authenticateToken, async (req, res) => {
       [description, amount, category, req.params.id]
     );
 
-    logger.info(`Expense updated: ${req.params.id}`);
+    logger.info(`Expense updated: ${req.params.id} for user: ${req.user.username}`);
     res.json(result.rows[0]);
   } catch (err) {
     logger.error(`Update expense error: ${err.message}`);
@@ -356,6 +332,7 @@ app.put('/api/v1/expenses/:id', authenticateToken, async (req, res) => {
 // Delete expense
 app.delete('/api/v1/expenses/:id', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const checkResult = await query(
       'SELECT user_id FROM expenses WHERE id = $1',
       [req.params.id]
@@ -365,13 +342,13 @@ app.delete('/api/v1/expenses/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Expense not found' });
     }
 
-    if (checkResult.rows[0].user_id !== req.user.id) {
+    if (checkResult.rows[0].user_id !== userId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
     await query('DELETE FROM expenses WHERE id = $1', [req.params.id]);
 
-    logger.info(`Expense deleted: ${req.params.id}`);
+    logger.info(`Expense deleted: ${req.params.id} for user: ${req.user.username}`);
     res.json({ message: 'Expense deleted successfully' });
   } catch (err) {
     logger.error(`Delete expense error: ${err.message}`);
